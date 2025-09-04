@@ -518,7 +518,7 @@
 
       // 1) Fetch-first: overlay/contact-info (server-rendered, robust)
       try {
-        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^\/]+\//);
+        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
         const base = m ? m[0] : '';
         const url = base ? base + 'overlay/contact-info/' : '';
         if (url) {
@@ -844,7 +844,12 @@
     }
     // Ensure About using deep fallback if still empty
     if (!basics.about) {
-      try { basics.about = await runWithStepTimeout('about-deep', () => fetchAboutFromProfile(profileUrl), 12000, ''); } catch {}
+      try {
+        // Try dedicated details/about first, then main page
+        let ab = await runWithStepTimeout('about-deep-details', () => fetchAboutFromDetails(profileUrl), 14000, '');
+        if (!ab) ab = await runWithStepTimeout('about-deep', () => fetchAboutFromProfile(profileUrl), 12000, '');
+        if (ab) basics.about = ab;
+      } catch {}
     }
     sendPartial('basics', basics);
 
@@ -1021,6 +1026,31 @@
           .map(n => (n.innerText || n.textContent || '').trim())
           .filter(Boolean);
         const txt = cleanAboutText(chunks.join(' ').trim());
+        if (txt) return txt;
+      }
+    } catch {}
+    return '';
+  }
+
+  async function fetchAboutFromDetails(profileUrl) {
+    try {
+      const m = (profileUrl || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
+      const root = m ? m[0] : '';
+      const url = root ? root + 'details/about/' : '';
+      if (!url) return '';
+      const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 16000 });
+      if (!res.ok) return '';
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const candidates = [
+        doc.querySelector('section#about'),
+        doc.querySelector('main'),
+        doc.body
+      ].filter(Boolean);
+      for (const rootEl of candidates) {
+        const nodes = rootEl.querySelectorAll('p, .lt-line-clamp__raw-line, .lt-line-clamp__line, span[aria-hidden="true"], .inline-show-more-text');
+        const textParts = Array.from(nodes).map(n => (n.innerText || n.textContent || '').trim()).filter(Boolean);
+        const txt = cleanAboutText(textParts.join(' ').trim());
         if (txt) return txt;
       }
     } catch {}
