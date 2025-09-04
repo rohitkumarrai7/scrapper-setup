@@ -41,6 +41,86 @@ function sendMessageWithTimeout(msg) {
   });
 }
 
+// Render the profile data into the popup UI
+function renderProfile(data) {
+  if (!data) return;
+  const pv = $('profileView');
+  if (!pv) return;
+  pv.style.display = 'block';
+
+  const pic = $('profilePic');
+  const nm = $('candidateName');
+  const hl = $('candidateHeadline');
+  const url = $('candidateUrl');
+  const ci = $('contactInfo');
+  const sm = $('summary');
+  const sk = $('skills');
+  const ex = $('experience');
+  const ed = $('education');
+  const lc = $('certifications');
+
+  if (pic) pic.src = data.profilePic || '';
+  if (nm) nm.textContent = data.name || '—';
+  if (hl) hl.textContent = data.headline || '—';
+  if (url) {
+    url.textContent = data.profileUrl || '';
+    url.onclick = () => { if (data.profileUrl) chrome.tabs.create({ url: data.profileUrl }); };
+  }
+
+  if (ci) {
+    ci.innerHTML = '';
+    const c = data.contactInfo || {};
+    const emails = Array.isArray(c.emails) ? c.emails : [];
+    const phones = Array.isArray(c.phones) ? c.phones : [];
+    const websites = Array.isArray(c.websites) ? c.websites : [];
+    emails.forEach(e => ci.innerHTML += `• Email: ${e}<br/>`);
+    phones.forEach(p => ci.innerHTML += `• Phone: ${p}<br/>`);
+    websites.forEach(w => ci.innerHTML += `• Website: ${w}<br/>`);
+    if (!emails.length && !phones.length && !websites.length) ci.textContent = '—';
+  }
+
+  if (sm) sm.textContent = data.about || '—';
+
+  if (sk) {
+    const arr = Array.isArray(data.skills) ? data.skills : [];
+    sk.innerHTML = arr.map(s => `<span class="chip">${s}</span>`).join(' ');
+    if (!arr.length) sk.textContent = '—';
+  }
+
+  if (ex) {
+    const arr = Array.isArray(data.experience) ? data.experience : [];
+    ex.innerHTML = arr.map(exp => {
+      const comp = exp.company || '';
+      const title = exp.title || '';
+      const dr = exp.dateRange || '';
+      return `${comp}${comp && title ? ' — ' : ''}${title}${dr ? ` (${dr})` : ''}`;
+    }).join('<br/>');
+    if (!arr.length) ex.textContent = '—';
+  }
+
+  if (ed) {
+    const arr = Array.isArray(data.education) ? data.education : [];
+    ed.innerHTML = arr.map(edc => {
+      const school = edc.school || '';
+      const degree = edc.degree || '';
+      const dr = edc.dateRange || '';
+      return `${school}${school && degree ? ' — ' : ''}${degree}${dr ? ` (${dr})` : ''}`;
+    }).join('<br/>');
+    if (!arr.length) ed.textContent = '—';
+  }
+
+  if (lc) {
+    const arr = Array.isArray(data.licenses) ? data.licenses : [];
+    lc.innerHTML = arr.map(cert => {
+      const name = cert.name || '';
+      const issuer = cert.issuer || '';
+      const dt = cert.date || '';
+      return `${name}${issuer ? ' — ' + issuer : ''}${dt ? ' — ' + dt : ''}`;
+    }).join('<br/>');
+    if (!arr.length) lc.textContent = '—';
+  }
+}
+
 // Listen for progress pings from content.js
 chrome.runtime.onMessage.addListener((m) => {
   if (m && m.type === 'SCRAPE_PROGRESS') {
@@ -78,6 +158,7 @@ $('btnScrape').addEventListener('click', async () => {
         setStatus('Scrape complete. Cached.');
         $('btnSaveCache').disabled = !lastData;
         $('btnPushATS') && ($('btnPushATS').disabled = !lastData);
+        renderProfile(lastData);
         return;
       }
       let done = false;
@@ -87,6 +168,7 @@ $('btnScrape').addEventListener('click', async () => {
         setStatus('Scrape complete. Cached.');
         $('btnSaveCache').disabled = !lastData;
         $('btnPushATS') && ($('btnPushATS').disabled = !lastData);
+        renderProfile(lastData);
       }, 15000);
       chrome.tabs.sendMessage(tab.id, { action: 'getProfileData' }, (lite) => {
         if (done) return;
@@ -105,6 +187,7 @@ $('btnScrape').addEventListener('click', async () => {
         setStatus('Scrape complete. Cached.');
         $('btnSaveCache').disabled = !lastData;
         $('btnPushATS') && ($('btnPushATS').disabled = !lastData);
+        renderProfile(lastData);
       });
     });
   } catch (e) {
@@ -136,8 +219,9 @@ $('btnViewLast').addEventListener('click', async () => {
       lastData = resp.data;
       $('btnSaveCache').disabled = !lastData;
       $('btnPushATS') && ($('btnPushATS').disabled = !lastData);
-      setStatus('Loaded from cache. Check console for details.');
+      setStatus('Loaded from cache.');
       try { console.log('Last cached profile:', lastData); } catch {}
+      renderProfile(lastData);
     } else {
       setStatus('No cached data found.', true);
     }

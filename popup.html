@@ -16,6 +16,8 @@
     .divider { height: 1px; background: #e5e7eb; margin: 10px 0; }
     .muted { color: #6b7280; font-size: 12px; }
     .badge { font-size: 12px; background: #def7ec; color: #03543f; padding: 2px 6px; border-radius: 9999px; }
+    .chip { background:#e5e7eb; padding:2px 6px; border-radius:6px; margin:2px; display:inline-block; }
+    .section-title { font-weight:600; margin:8px 0 4px; }
   </style>
 </head>
 <body>
@@ -37,6 +39,53 @@
     <button id="btnPushATS" class="ghost" disabled>Push to ATS</button>
   </div>
   <div class="divider"></div>
+  <div id="profileView" style="font-size:13px; line-height:1.4; display:none;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <img id="profilePic" src="" alt="Profile Picture" style="width:50px;height:50px;border-radius:50%;object-fit:cover;" />
+      <div>
+        <div id="candidateName" style="font-weight:bold; font-size:14px;"></div>
+        <div id="candidateHeadline" style="color:#555;"></div>
+        <div id="candidateUrl" style="font-size:12px; color:#2563eb; cursor:pointer;"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">📞 Contact Info</div>
+      <div id="contactInfo"></div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">📝 Summary</div>
+      <div id="summary"></div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">💡 Skills</div>
+      <div id="skills"></div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">💼 Experience</div>
+      <div id="experience"></div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">🎓 Education</div>
+      <div id="education"></div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">📜 Certifications</div>
+      <div id="certifications"></div>
+    </div>
+  </div>
   <div id="status" class="status muted">Ready.</div>
 
   <script src="popup.js"></script>
