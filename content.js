@@ -719,38 +719,6 @@
     return Array.from(top).slice(0, 10);
   }
 
-  async function fetchCommentsForLast7Days(profileUrl) {
-    try {
-      const base = profileUrl.replace(/\/?$/, '');
-      const urls = [base + '/recent-activity/comments/', base + '/recent-activity/all/'];
-      const items = [];
-      for (const u of urls) {
-        try {
-          const res = await fetchWithTimeout(u, { credentials: 'include', timeout: 15000 });
-          if (!res.ok) continue;
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          qa('article, .feed-shared-update-v2, .ember-view').forEach((card) => {
-            const textNode = q('[data-test-commentary], .comments-comment-item__main-content, .update-components-text, .break-words', card);
-            const cmt = text(textNode);
-            const timeEl = q('time, .update-components-actor__sub-description span, .visually-hidden', card);
-            const timeStr = timeEl ? (timeEl.getAttribute('datetime') || timeEl.textContent || '').trim() : '';
-            const dt = parseRelativeTime(timeStr);
-            if (cmt && dt && ((new Date() - dt) / (1000 * 60 * 60 * 24)) <= 7) {
-              const link = q('a[href^="https://www.linkedin.com/feed/update/"]', card);
-              items.push({ text: cmt, timestamp: dt.toISOString() });
-            }
-          });
-          if (items.length) break; // got some
-        } catch (e) { console.warn('Comments fetch loop failed', e); }
-      }
-      return items;
-    } catch (e) {
-      console.warn('Comments scrape failed:', e);
-      return [];
-    }
-  }
-
   async function scrapeAll(options) {
     progress('init');
     await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]', 20000);
@@ -937,32 +905,6 @@
     return out.join(' ');
   }
 
-  function getRecentComments() {
-    const now = new Date();
-    const comments = [];
-    document.querySelectorAll('.comments-comment-item__main-content').forEach((el) => {
-      const text = (el.innerText || el.textContent || '').trim();
-      const item = el.closest('.comments-comment-item, .comments-comment-item__content');
-      const timeEl = item ? item.querySelector('time') : null;
-      const iso = timeEl ? (timeEl.getAttribute('datetime') || timeEl.textContent || '').trim() : '';
-      const dt = parseRelativeTime(iso);
-      if (text && dt && ((now - dt) / (1000 * 60 * 60 * 24)) <= 7) {
-        comments.push({ text, timestamp: dt.toISOString() });
-      }
-    });
-    return comments;
-  }
-
-  // Optional: observe dynamic additions while scrolling current view
-  let commentsObserver = null;
-  function ensureCommentsObserver() {
-    if (commentsObserver) return;
-    commentsObserver = new MutationObserver(() => {
-      // No heavy work here; consumer can call getRecentComments()
-    });
-    try { commentsObserver.observe(document.body, { childList: true, subtree: true }); } catch {}
-  }
-
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'PING') { sendResponse({ type: 'PONG' }); return; }
     if (msg && msg.type === 'DO_SCRAPE') {
@@ -982,9 +924,6 @@
     }
     // Lightweight data fetch without full scrape
     if (msg && (msg.action === 'getProfileData')) {
-      try {
-        // comments removed; no observer needed
-      } catch {}
       try {
         sendResponse({
           ok: true,

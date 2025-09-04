@@ -1,18 +1,16 @@
 {
-  "name": "chrome-extension",
+  "name": "optymatch-linkedin-scraper",
   "version": "1.0.0",
+  "private": true,
+  "description": "Chrome MV3 extension to scrape LinkedIn profiles (Name, Headline, About, Contact Info, Skills, Experience, Education, Certifications).",
   "main": "background.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "echo \"No lint configured\"",
+    "build": "echo \"No build step required for MV3\"",
+    "test": "echo \"No tests\""
   },
-  "keywords": [],
+  "keywords": ["chrome", "extension", "linkedin", "scraper", "mv3"],
   "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "body-parser": "^1.20.3",
-    "express": "^4.21.0",
-    "sequelize": "^6.37.3",
-    "sqlite3": "^5.1.7"
-  }
+  "license": "MIT",
+  "dependencies": {}
 }

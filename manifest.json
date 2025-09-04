@@ -2,7 +2,7 @@
   "name": "LinkedIn Profile Scraper",
   "version": "1.0.0",
   "manifest_version": 3,
-  "description": "Scrape full LinkedIn profiles (including skills and recent comments) and cache the latest result for UI/API integration.",
+  "description": "Scrape full LinkedIn profiles (Name, Headline, About, Contact Info, Skills, Experience, Education, Certifications) and cache the latest result for UI/API integration.",
   "permissions": [
     "activeTab",
     "scripting",
