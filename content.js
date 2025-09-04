@@ -974,33 +974,42 @@
 
   // --- Lightweight DOM helpers per request ---
   function getAboutSection() {
-    // Prefer explicit About containers; avoid global fallbacks that pull unrelated text
+    // Prefer explicit About containers
     const aboutRoots = [
       document.querySelector('section#about'),
-      Array.from(document.querySelectorAll('section')).find(sec => /\babout\b/i.test((sec.getAttribute('id') || ''))),
-      document.querySelector('[data-test-id="about"]'),
       document.querySelector('section.pv-about-section'),
+      document.querySelector('[data-test-id="about"]'),
+      Array.from(document.querySelectorAll('section')).find(sec =>
+        /\babout\b/i.test((sec.getAttribute('id') || sec.innerText || ''))
+      )
     ].filter(Boolean);
 
     for (const root of aboutRoots) {
       try { expandWithin(root); } catch {}
-      // Try expanding a visible "See more" button inside About
+
+      // Click "See more" if exists
       try {
         const btn = root.querySelector('button[aria-label*="see more" i], button[aria-label*="show more" i], .inline-show-more-text__button');
         if (btn && (btn instanceof HTMLElement)) { btn.click(); }
       } catch {}
-      const chunks = Array.from(root.querySelectorAll('p, .lt-line-clamp__line, .lt-line-clamp__raw-line, span[aria-hidden="true"]'))
+
+      // Collect About text with extended selectors for new DOM
+      const chunks = Array.from(root.querySelectorAll(
+        'p, .lt-line-clamp__line, .lt-line-clamp__raw-line, span[aria-hidden="true"], .inline-show-more-text, .pvs-list__outer-container p'
+      ))
         .map(n => (n.innerText || n.textContent || '').trim())
         .filter(Boolean);
+
       const txt = cleanAboutText(chunks.join(' ').trim());
       if (txt) return txt;
     }
-    // Fallback: look for a heading "About" and take following sibling text
+
+    // Fallback: search by heading "About"
     try {
       const hdr = Array.from(document.querySelectorAll('h2, h3')).find(h => /\babout\b/i.test((h.textContent || '')));
       if (hdr) {
         const host = hdr.closest('section, div') || document;
-        const p = host.querySelector('p, .lt-line-clamp__raw-line, .lt-line-clamp__line');
+        const p = host.querySelector('p, .lt-line-clamp__raw-line, .lt-line-clamp__line, .pvs-list__outer-container p');
         const alt = cleanAboutText((p && (p.innerText || p.textContent) || '').trim());
         if (alt) return alt;
       }
@@ -1017,9 +1026,11 @@
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const aboutRoots = [
         doc.querySelector('section#about'),
-        Array.from(doc.querySelectorAll('section')).find(sec => /\babout\b/i.test((sec.getAttribute('id') || ''))),
-        doc.querySelector('[data-test-id="about"]'),
         doc.querySelector('section.pv-about-section'),
+        doc.querySelector('[data-test-id="about"]'),
+        Array.from(doc.querySelectorAll('section')).find(sec =>
+          /\babout\b/i.test((sec.getAttribute('id') || sec.innerText || ''))
+        )
       ].filter(Boolean);
       for (const root of aboutRoots) {
         const chunks = Array.from(root.querySelectorAll('p, .lt-line-clamp__line, .lt-line-clamp__raw-line, span[aria-hidden="true"]'))
