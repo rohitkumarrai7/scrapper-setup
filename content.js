@@ -324,7 +324,7 @@
 
     // Name
     let name = '';
-    const nameNode = q('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]');
+    const nameNode = q('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir], div.ph5 h1');
     name = norm(text(nameNode));
 
     // Headline
@@ -764,41 +764,46 @@
     let contactInfo = null;
     let skills = [];
     let topSkills = [];
-    let comments = [];
 
+    // Basics (name, headline, about, pic)
     progress('basics');
     try { basics = await scrapeBasics(); } catch (e) { console.warn('Basics failed', e); }
-    sendPartial('basics', basics);
-
     if (!basics.name) {
+      // Retry after small scroll; some heavy profiles render late
       await sleep(900);
       await autoScroll(8);
       try { basics = await scrapeBasics(); } catch {}
     }
+    sendPartial('basics', basics);
 
+    // Lightweight sections (sync)
     progress('sections');
     try { experience = getExperience(); } catch (e) { console.warn('Exp failed', e); }
     try { education = getEducation(); } catch (e) { console.warn('Edu failed', e); }
     try { licenses = getCertifications(); } catch (e) { console.warn('Licenses failed', e); }
     sendPartial('sections', { experience, education, licenses });
 
+    // Heavy/async sections sequentially with per-step timeouts
     progress('contact');
-    // Guard heavy steps with per-step timeouts and continue on failure
-    const contactP = runWithStepTimeout('contact', () => scrapeContactInfo(!!options.includeContact), 20000, null);
-    progress('skills');
-    const skillsP = runWithStepTimeout('skills', () => scrapeSkills(!!options.includeSkills), 20000, []);
-    progress('top-skills');
-    const topSkillsP = runWithStepTimeout('top-skills', () => scrapeTopSkills(!!options.includeSkills), 20000, []);
-    const [contactRes, skillsRes, topSkillsRes] = await Promise.all([contactP, skillsP, topSkillsP]);
-    contactInfo = contactRes;
-    skills = Array.isArray(skillsRes) ? skillsRes : [];
-    topSkills = Array.isArray(topSkillsRes) ? topSkillsRes : [];
+    try {
+      contactInfo = await runWithStepTimeout('contact', () => scrapeContactInfo(!!options.includeContact), 30000, null);
+    } catch (e) { console.warn('Contact failed', e); }
     sendPartial('contact', contactInfo);
+
+    progress('skills');
+    try {
+      skills = await runWithStepTimeout('skills', () => scrapeSkills(!!options.includeSkills), 45000, []);
+    } catch (e) { console.warn('Skills failed', e); skills = []; }
     sendPartial('skills', skills);
+
+    progress('top-skills');
+    try {
+      topSkills = await runWithStepTimeout('top-skills', () => scrapeTopSkills(!!options.includeSkills), 30000, []);
+    } catch (e) { console.warn('Top skills failed', e); topSkills = []; }
     sendPartial('topSkills', topSkills);
 
+    // Assemble result with deduped topSkills
     progress('assemble');
-    // Dedup topSkills against skills and limit
     const skillsSet = new Set(Array.isArray(skills) ? skills : []);
     const topClean = Array.from(new Set(Array.isArray(topSkills) ? topSkills : [])).filter((s) => !skillsSet.has(s)).slice(0, 10);
     return {
