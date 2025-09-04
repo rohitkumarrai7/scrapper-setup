@@ -17,8 +17,8 @@
     try { chrome.runtime.sendMessage({ type: 'PARTIAL_DATA', section, data }); } catch (e) { /* ignore */ }
   }
 
-  // Overall timeout wrapper for the whole scrape
-  function withOverallTimeout(promise, ms = 120000) {
+  // Overall timeout wrapper for the whole scrape (big profiles need longer)
+  function withOverallTimeout(promise, ms = 170000) {
     let t;
     return Promise.race([
       promise,
@@ -397,11 +397,11 @@
         });
       };
 
-      // 1) Try in-page modal first
-      const btn = q('a#top-card-text-details-contact-info, a[data-control-name="contact_see_more"], a[href*="overlay/contact-info"], a[aria-label*="Contact info" i]');
+      // 1) Try in-page modal first (cover anchors and buttons)
+      const btn = q('a#top-card-text-details-contact-info, a[data-control-name="contact_see_more"], a[href*="overlay/contact-info"], a[aria-label*="Contact info" i], button[aria-label*="Contact info" i], button[data-control-name*="contact" i]');
       if (btn) {
         await clickIfExists(btn);
-        await waitForSelector('.artdeco-modal[role="dialog"], .pv-contact-info__modal, .pv-contact-info');
+        await waitForSelector('.artdeco-modal[role="dialog"], .pv-contact-info__modal, .pv-contact-info', 15000);
         const modal = q('.artdeco-modal[role="dialog"], .pv-contact-info__modal, .pv-contact-info');
         if (modal) {
           const content = q('.artdeco-modal__content, .pv-contact-info__modal-content, .pv-contact-info, .pv-contact-info__container', modal) || modal;
@@ -468,8 +468,8 @@
       // sanitize websites: only http(s). For linkedin.com, only keep this profile's own /in/<slug> URL.
       let profileSlug = '';
       try {
-        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
-        if (m) profileSlug = (m[1] || '').toLowerCase();
+        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/([^/]+)\//);
+        if (m && m[1]) profileSlug = m[1].toLowerCase();
       } catch {}
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
         try {
@@ -477,8 +477,8 @@
           const host = hostname.replace(/^www\./, '').toLowerCase();
           if (host !== 'linkedin.com' && host !== 'www.linkedin.com') return true; // keep external domains
           // For linkedin.com, keep ONLY the current profile base URL
-          const m = pathname.match(/^\/in\/([^\/]+)\/?$/);
-          if (m && profileSlug && m[1].toLowerCase() === profileSlug) return true;
+          const m2 = pathname.match(/^\/in\/([^\/]+)\/?$/);
+          if (m2 && profileSlug && m2[1].toLowerCase() === profileSlug) return true;
           return false; // drop all other linkedin routes (company, groups, others' profiles, newsletters, etc.)
         } catch { return false; }
       });
@@ -754,19 +754,19 @@
     // Heavy/async sections sequentially with per-step timeouts
     progress('contact');
     try {
-      contactInfo = await runWithStepTimeout('contact', () => scrapeContactInfo(!!options.includeContact), 30000, null);
+      contactInfo = await runWithStepTimeout('contact', () => scrapeContactInfo(!!options.includeContact), 45000, null);
     } catch (e) { console.warn('Contact failed', e); }
     sendPartial('contact', contactInfo);
 
     progress('skills');
     try {
-      skills = await runWithStepTimeout('skills', () => scrapeSkills(!!options.includeSkills), 45000, []);
+      skills = await runWithStepTimeout('skills', () => scrapeSkills(!!options.includeSkills), 60000, []);
     } catch (e) { console.warn('Skills failed', e); skills = []; }
     sendPartial('skills', skills);
 
     progress('top-skills');
     try {
-      topSkills = await runWithStepTimeout('top-skills', () => scrapeTopSkills(!!options.includeSkills), 30000, []);
+      topSkills = await runWithStepTimeout('top-skills', () => scrapeTopSkills(!!options.includeSkills), 45000, []);
     } catch (e) { console.warn('Top skills failed', e); topSkills = []; }
     sendPartial('topSkills', topSkills);
 
@@ -910,7 +910,7 @@
     if (msg && msg.type === 'DO_SCRAPE') {
       (async () => {
         try {
-          const data = await withOverallTimeout(scrapeAll(msg.options || {}), 120000);
+          const data = await withOverallTimeout(scrapeAll(msg.options || {}), 170000);
           progress('done');
           // Return partial data even if name not found; popup can show warning
           sendResponse({ ok: true, data });

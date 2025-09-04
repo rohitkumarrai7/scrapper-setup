@@ -14,8 +14,8 @@ function getOptions() {
   };
 }
 
-// Longer timeout window for end-to-end scrape
-const TIMEOUT_MS = 120000;
+// Longer timeout window for end-to-end scrape (big profiles may need more time)
+const TIMEOUT_MS = 180000;
 
 function sendMessageWithTimeout(msg) {
   return new Promise((resolve, reject) => {

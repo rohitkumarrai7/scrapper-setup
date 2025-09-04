@@ -42,7 +42,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             chrome.tabs.onUpdated.removeListener(onUpdatedGuard);
             sendResponse({ ok: false, error: 'Timed out waiting for scrape to finish.' });
           }
-        }, 120000);
+        }, 180000);
 
         const handleResult = async (resp) => {
           if (responded || navAbort) return;
@@ -193,7 +193,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse({ ok: false, error: 'Navigation to base profile timed out.' });
             } catch {}
           }
-        }, 20000);
+        }, 30000);
         chrome.tabs.onUpdated.addListener(onUpdated);
         chrome.tabs.update(tab.id, { url: baseUrl });
         return true; // keep channel open
