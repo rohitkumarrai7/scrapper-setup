@@ -4,27 +4,62 @@
   <meta charset="utf-8" />
   <title>OptyMatch Scraper</title>
   <style>
-    body { font-family: Arial, sans-serif; width: 340px; margin: 0; padding: 14px; }
-    h1 { font-size: 16px; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+    :root {
+      --brand: #0b5d3b; /* deep green */
+      --brand-700: #0b5d3b;
+      --brand-600: #11724a;
+      --brand-50: #e6f3ec;
+      --text: #0f172a;
+      --muted: #6b7280;
+      --surface: #ffffff;
+      --chip: #eef2f7;
+      --border: #e5e7eb;
+    }
+    body { font-family: Inter, system-ui, Arial, sans-serif; width: 360px; margin: 0; padding: 0; background: var(--surface); color: var(--text); }
+    .wrap { padding: 14px; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: linear-gradient(90deg, var(--brand-700), var(--brand-600)); color: #fff; }
+    header .brand { display:flex; align-items:center; gap:10px; font-weight: 600; }
+    header img { width: 26px; height: 26px; border-radius: 4px; object-fit: cover; }
+    h1 { font-size: 14px; margin: 0; }
     .row { display: flex; gap: 8px; margin-bottom: 8px; }
-    button { flex: 1; padding: 10px; background: #2563eb; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
-    button.secondary { background: #64748b; }
+    button { flex: 1; padding: 10px; background: var(--brand-700); color: #fff; border: 0; border-radius: 8px; cursor: pointer; transition: transform .04s ease, box-shadow .2s ease; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: #475569; }
     button.ghost { background: #e5e7eb; color: #111827; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .opts { margin: 10px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 13px; }
-    .status { margin-top: 10px; font-size: 12px; color: #111827; min-height: 18px; }
-    .divider { height: 1px; background: #e5e7eb; margin: 10px 0; }
-    .muted { color: #6b7280; font-size: 12px; }
+    .status { margin: 8px 14px 12px; font-size: 12px; color: #111827; min-height: 18px; }
+    .divider { height: 1px; background: var(--border); margin: 10px 0; }
+    .muted { color: var(--muted); font-size: 12px; }
     .badge { font-size: 12px; background: #def7ec; color: #03543f; padding: 2px 6px; border-radius: 9999px; }
-    .chip { background:#e5e7eb; padding:2px 6px; border-radius:6px; margin:2px; display:inline-block; }
+    .chip { background: var(--chip); padding:2px 6px; border-radius:6px; margin:2px; display:inline-block; }
     .section-title { font-weight:600; margin:8px 0 4px; }
+    /* Drag & Drop */
+    .uploader { margin: 10px 0 14px; }
+    .dropzone {
+      border: 2px dashed var(--brand-600);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--brand-50);
+      transition: background .2s ease, border-color .2s ease, color .2s ease;
+    }
+    .dropzone.hover { background: #dff0e7; color: #0b3b27; border-color: var(--brand-700); }
+    .dropzone small { display:block; margin-top:4px; }
+    .file-meta { font-size: 12px; color: var(--text); margin-top: 6px; }
   </style>
 </head>
 <body>
-  <h1>
-    <span>OptyMatch Scraper</span>
+  <header>
+    <div class="brand">
+      <img src="models/logo.png" alt="OptyMatch"/>
+      <h1>OptyMatch Scraper</h1>
+    </div>
     <span class="badge">Connected ✅</span>
-  </h1>
+  </header>
+  <div class="wrap">
   <div class="opts">
     <label><input type="checkbox" id="optSkills" checked> Include Skills</label>
     <label><input type="checkbox" id="optContact" checked> Include Contact Info</label>
@@ -36,6 +71,15 @@
   <div class="row">
     <button id="btnViewLast" class="secondary">View Last</button>
     <button id="btnPushATS" class="ghost" disabled>Push to ATS</button>
+  </div>
+  <!-- Drag & Drop + File Input -->
+  <div class="uploader">
+    <div id="dropzone" class="dropzone">
+      <strong>Attach resume (PDF/DOCX)</strong>
+      <small>Drag & drop here, or click to browse</small>
+      <input id="fileInput" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none" />
+    </div>
+    <div id="fileMeta" class="file-meta"></div>
   </div>
   <div class="divider"></div>
   <div id="profileView" style="font-size:13px; line-height:1.4; display:none;">
@@ -93,6 +137,7 @@
     </div>
   </div>
   <div id="status" class="status muted">Ready.</div>
+  </div>
 
   <script src="popup.js"></script>
 </body>

@@ -177,6 +177,100 @@ function renderProfile(data) {
   }
 }
 
+// -------- Resume Uploader (Drag & Drop + File Input) --------
+let resumeUpload = null; // { name, size, type, base64 }
+
+function humanSize(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  const units = ['B','KB','MB','GB'];
+  let i = 0, v = bytes;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return `${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)} ${units[i]}`;
+}
+
+function showFileMeta() {
+  const fm = $('fileMeta');
+  if (!fm) return;
+  if (!resumeUpload) { fm.textContent = ''; return; }
+  const { name, size, type } = resumeUpload;
+  fm.textContent = `${name} • ${humanSize(size)} • ${type}`;
+}
+
+function validateFile(file) {
+  if (!file) return 'No file selected';
+  const okExt = /(\.pdf|\.docx)$/i.test(file.name);
+  const okMime = (
+    file.type === 'application/pdf' ||
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    (!file.type && okExt) // Chrome sometimes leaves .docx mime empty
+  );
+  if (!okExt || !okMime) return 'Only PDF or DOCX files are allowed.';
+  const maxBytes = 10 * 1024 * 1024; // 10 MB safety
+  if (file.size > maxBytes) return 'File is too large (max 10 MB).';
+  return '';
+}
+
+function readFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('Failed to read file'));
+    fr.onload = () => {
+      try {
+        const dataUrl = String(fr.result || '');
+        const comma = dataUrl.indexOf(',');
+        const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : '';
+        resolve(base64);
+      } catch (e) { reject(e); }
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+async function handleFiles(files) {
+  const file = files && files[0];
+  const err = validateFile(file);
+  if (err) { setStatus(err, true); return; }
+  setStatus('Reading file…', true);
+  try {
+    const base64 = await readFileToBase64(file);
+    resumeUpload = { name: file.name, size: file.size, type: file.type || (/.docx$/i.test(file.name) ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf'), base64 };
+    showFileMeta();
+    setStatus('Resume attached (in memory).', true);
+    try { chrome.storage.session.set({ resumeUpload }); } catch {}
+  } catch (e) {
+    setStatus('Failed to read file.', true);
+  }
+}
+
+function setupUploader() {
+  const dz = $('dropzone');
+  const fi = $('fileInput');
+  if (!dz || !fi) return;
+
+  // Restore from session (in-memory between popup openings this session)
+  try {
+    chrome.storage.session.get('resumeUpload', (res) => {
+      if (res && res.resumeUpload && res.resumeUpload.base64) {
+        resumeUpload = res.resumeUpload;
+        showFileMeta();
+      }
+    });
+  } catch {}
+
+  dz.addEventListener('click', () => fi.click());
+  fi.addEventListener('change', (e) => {
+    const files = e.target && e.target.files ? e.target.files : null;
+    if (files && files.length) handleFiles(files);
+  });
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('hover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('hover'));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault(); dz.classList.remove('hover');
+    const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
+    if (files && files.length) handleFiles(files);
+  });
+}
+
 // Listen for progress pings from content.js
 chrome.runtime.onMessage.addListener((m) => {
   if (m && m.type === 'SCRAPE_PROGRESS') {
@@ -334,7 +428,17 @@ $('btnPushATS') && $('btnPushATS').addEventListener('click', async () => {
   setStatus('Preparing push…', true);
   // TODO: integrate with OptyMatch ATS API
   try {
-    const resp = await sendMessageWithTimeout({ type: 'PUSH_TO_ATS', data: lastData });
+    // Attach resume (kept only in session memory) to the outgoing data
+    const payload = Object.assign({}, lastData);
+    if (resumeUpload && resumeUpload.base64) {
+      payload.resume = {
+        name: resumeUpload.name,
+        size: resumeUpload.size,
+        type: resumeUpload.type,
+        base64: resumeUpload.base64,
+      };
+    }
+    const resp = await sendMessageWithTimeout({ type: 'PUSH_TO_ATS', data: payload });
     if (resp && resp.ok) setStatus('Pushed to ATS.');
     else setStatus('ATS push not implemented yet.', true);
   } catch {
@@ -351,3 +455,6 @@ window.getLastScrape = async function () {
     });
   });
 };
+
+// Initialize uploader after DOM is ready
+try { setupUploader(); } catch {}
