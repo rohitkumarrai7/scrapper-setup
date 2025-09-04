@@ -942,3 +942,32 @@
 
 // Allow controlled SPA navigation for deep sections (skills/contact/licenses)
 const ALLOW_SPA_NAV = true;
+
+// Port-based long-lived messaging for robust large-profile scraping
+try {
+  chrome.runtime.onConnect.addListener((port) => {
+    if (!port || port.name !== 'scrape-port') return;
+    let aborted = false;
+
+    const safePost = (msg) => { try { port.postMessage(msg); } catch {} };
+
+    port.onDisconnect.addListener(() => { aborted = true; });
+
+    port.onMessage.addListener(async (msg) => {
+      if (!msg || msg.type !== 'START_SCRAPE') return;
+      const options = msg.options || {};
+      safePost({ type: 'PROGRESS', step: 'init', detail: 'starting' });
+      try {
+        const data = await withOverallTimeout(scrapeAll(options), 170000);
+        if (aborted) return;
+        // stream final and also a partial for cache recovery
+        safePost({ type: 'PROGRESS', step: 'done', detail: 'complete', partialKey: 'lastScrape', partialData: data });
+        safePost({ type: 'RESULT', ok: true, data });
+        setTimeout(() => { try { port.disconnect(); } catch {} }, 300);
+      } catch (e) {
+        if (aborted) return;
+        safePost({ type: 'ERROR', error: e && e.message ? e.message : String(e) });
+      }
+    });
+  });
+} catch (e) { /* onConnect not available in some test harnesses */ }
