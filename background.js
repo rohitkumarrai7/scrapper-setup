@@ -138,14 +138,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.type === 'GET_LAST_SCRAPE' || request.type === 'GET_LAST_DATA') {
-    chrome.storage.session.get('lastScrape').then((res) => {
-      const data = res.lastScrape || null;
-      if (data) { sendResponse({ ok: true, data }); return; }
-      // fallback to local if session empty
-      chrome.storage.local.get('lastScrape', (res2) => {
-        sendResponse({ ok: true, data: res2.lastScrape || null });
+    try {
+      chrome.storage.session.get('lastScrape', (res) => {
+        if (chrome.runtime.lastError) {
+          // fallback to local on error
+          chrome.storage.local.get('lastScrape', (res2) => {
+            sendResponse({ ok: true, data: res2 && res2.lastScrape ? res2.lastScrape : null });
+          });
+          return;
+        }
+        const data = (res && res.lastScrape) || null;
+        if (data) { sendResponse({ ok: true, data }); return; }
+        // fallback to local if session empty
+        chrome.storage.local.get('lastScrape', (res2) => {
+          sendResponse({ ok: true, data: res2 && res2.lastScrape ? res2.lastScrape : null });
+        });
       });
-    });
+    } catch (e) {
+      // last resort: try local and respond
+      chrome.storage.local.get('lastScrape', (res2) => {
+        sendResponse({ ok: true, data: res2 && res2.lastScrape ? res2.lastScrape : null });
+      });
+    }
     return true;
   }
 
@@ -153,19 +167,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'PARTIAL_DATA') {
     try {
       const { section, data } = request;
-      chrome.storage.session.get('lastScrape').then((res) => {
-        const prev = res.lastScrape || {};
+      chrome.storage.session.get('lastScrape', (res) => {
+        const prev = (res && res.lastScrape) || {};
         const merged = { ...prev };
         if (section && typeof section === 'string') {
           merged[section] = data;
         } else if (data && typeof data === 'object') {
           Object.assign(merged, data);
         }
-        chrome.storage.session.set({ lastScrape: merged }).then(() => {
+        chrome.storage.session.set({ lastScrape: merged }, () => {
+          if (chrome.runtime.lastError) {
+            // fallback to local
+            chrome.storage.local.set({ lastScrape: merged }, () => sendResponse({ ok: true }));
+            return;
+          }
           sendResponse({ ok: true });
-        }).catch(() => {
-          // fallback to local
-          chrome.storage.local.set({ lastScrape: merged }, () => sendResponse({ ok: true }));
         });
       });
     } catch (e) {
@@ -176,11 +192,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // Optional explicit save hook (e.g., from popup button)
   if (request.type === 'SAVE_LAST_SCRAPE') {
-    chrome.storage.session.set({ lastScrape: request.data }).then(() => {
-      sendResponse({ ok: true });
-    }).catch(() => {
+    try {
+      chrome.storage.session.set({ lastScrape: request.data }, () => {
+        if (chrome.runtime.lastError) {
+          chrome.storage.local.set({ lastScrape: request.data }, () => sendResponse({ ok: true }));
+          return;
+        }
+        sendResponse({ ok: true });
+      });
+    } catch (e) {
       chrome.storage.local.set({ lastScrape: request.data }, () => sendResponse({ ok: true }));
-    });
+    }
     return true;
   }
 

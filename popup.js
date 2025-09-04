@@ -215,18 +215,61 @@ $('btnViewLast').addEventListener('click', async () => {
   setStatus('Loading last cached…', true);
   try {
     const resp = await sendMessageWithTimeout({ type: 'GET_LAST_SCRAPE' });
-    if (resp && resp.ok && resp.data) {
-      lastData = resp.data;
+    let data = resp && resp.ok ? resp.data : null;
+    if (!data) {
+      // Fallback: read directly from session, then local
+      data = await new Promise((resolve) => {
+        try {
+          chrome.storage.session.get('lastScrape', (res) => {
+            if (chrome.runtime.lastError) {
+              chrome.storage.local.get('lastScrape', (res2) => resolve(res2 && res2.lastScrape ? res2.lastScrape : null));
+            } else if (res && res.lastScrape) {
+              resolve(res.lastScrape);
+            } else {
+              chrome.storage.local.get('lastScrape', (res2) => resolve(res2 && res2.lastScrape ? res2.lastScrape : null));
+            }
+          });
+        } catch (e) {
+          chrome.storage.local.get('lastScrape', (res2) => resolve(res2 && res2.lastScrape ? res2.lastScrape : null));
+        }
+      });
+    }
+    if (data) {
+      lastData = data;
       $('btnSaveCache').disabled = !lastData;
       $('btnPushATS') && ($('btnPushATS').disabled = !lastData);
       setStatus('Loaded from cache.');
-      try { console.log('Last cached profile:', lastData); } catch {}
+      try { console.log('Last cached profile (fallback-aware):', lastData); } catch {}
       renderProfile(lastData);
     } else {
       setStatus('No cached data found.', true);
     }
   } catch (e) {
-    setStatus('Error: ' + e.message, true);
+    // Fallback path if messaging failed entirely
+    try {
+      const data = await new Promise((resolve) => {
+        chrome.storage.session.get('lastScrape', (res) => {
+          if (chrome.runtime.lastError) {
+            chrome.storage.local.get('lastScrape', (res2) => resolve(res2 && res2.lastScrape ? res2.lastScrape : null));
+          } else if (res && res.lastScrape) {
+            resolve(res.lastScrape);
+          } else {
+            chrome.storage.local.get('lastScrape', (res2) => resolve(res2 && res2.lastScrape ? res2.lastScrape : null));
+          }
+        });
+      });
+      if (data) {
+        lastData = data;
+        $('btnSaveCache').disabled = !lastData;
+        $('btnPushATS') && ($('btnPushATS').disabled = !lastData);
+        setStatus('Loaded from cache.');
+        renderProfile(lastData);
+        return;
+      }
+      setStatus('No cached data found.', true);
+    } catch (e2) {
+      setStatus('Error: ' + e.message, true);
+    }
   }
 });
 
