@@ -18,7 +18,7 @@
   }
 
   // Overall timeout wrapper for the whole scrape
-  function withOverallTimeout(promise, ms = 90000) {
+  function withOverallTimeout(promise, ms = 120000) {
     let t;
     return Promise.race([
       promise,
@@ -468,7 +468,7 @@
       // sanitize websites: only http(s). For linkedin.com, only keep this profile's own /in/<slug> URL.
       let profileSlug = '';
       try {
-        const m = (location.href || '').match(/https?:\/\/(?:[a-zA-Z0-9-]+\.)*linkedin\.com\/in\/([^\/?#]+)\/?/);
+        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
         if (m) profileSlug = (m[1] || '').toLowerCase();
       } catch {}
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
@@ -963,7 +963,7 @@
     if (msg && msg.type === 'DO_SCRAPE') {
       (async () => {
         try {
-          const data = await withOverallTimeout(scrapeAll(msg.options || {}), 90000);
+          const data = await withOverallTimeout(scrapeAll(msg.options || {}), 120000);
           progress('done');
           // Return partial data even if name not found; popup can show warning
           sendResponse({ ok: true, data });
@@ -978,7 +978,7 @@
     // Lightweight data fetch without full scrape
     if (msg && (msg.action === 'getProfileData')) {
       try {
-        ensureCommentsObserver();
+        // comments removed; no observer needed
       } catch {}
       try {
         sendResponse({
@@ -986,7 +986,6 @@
           data: {
             skills: getTopSkills(),
             about: getAboutSection(),
-            comments: getRecentComments(),
           },
         });
       } catch (e) {

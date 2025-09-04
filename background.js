@@ -172,7 +172,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             done = true;
             try { chrome.tabs.onUpdated.removeListener(onUpdated); } catch {}
             try { clearTimeout(navWatchdog); } catch {}
-            proceed();
+            try {
+              proceed();
+            } catch (e) {
+              if (!responded) {
+                responded = true;
+                sendResponse({ ok: false, error: 'Failed to start scrape: ' + (e && e.message ? e.message : String(e)) });
+              }
+            }
           }
         };
         // Navigation watchdog to avoid hanging the channel if "complete" never fires
@@ -181,7 +188,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             done = true;
             try { chrome.tabs.onUpdated.removeListener(onUpdated); } catch {}
             try { /* no-op */ } catch {}
-            try { sendResponse({ ok: false, error: 'Navigation to base profile timed out.' }); } catch {}
+            try {
+              responded = true;
+              sendResponse({ ok: false, error: 'Navigation to base profile timed out.' });
+            } catch {}
           }
         }, 20000);
         chrome.tabs.onUpdated.addListener(onUpdated);
@@ -189,7 +199,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; // keep channel open
       }
 
-      proceed();
+      try {
+        proceed();
+      } catch (e) {
+        if (!responded) {
+          responded = true;
+          sendResponse({ ok: false, error: 'Failed to start scrape: ' + (e && e.message ? e.message : String(e)) });
+        }
+      }
     });
     return true; // keep sendResponse alive
   }
