@@ -1,0 +1,358 @@
+// COLORS
+$color-primary: #064BE2;
+$color-primary-light:#2065fc;
+$color-primary-dark:#1450d3;
+$color-grey-dark:#777;
+$color-white:#fff;
+$color-black:#000;
+
+$color-grey-light-1:#f7f7f7;
+$color-grey-light-2:#eee;
+
+// GRID
+$grid-width:114rem;
+$gutter-verticle:8rem;
+$gutter-horizontal:6rem;
+
+
+//FONT
+
+$default-font-size : 1.6rem;
+
+
+.d-flex {
+  display: flex;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.align-items-flex-start {
+  align-items: flex-start !important;
+}
+
+.justify-content-s-b {
+  justify-content: space-between;
+}
+
+.justify-content-center {
+  justify-content: center;
+}
+
+.w-100 {
+  width: 100% !important;
+}
+
+.w-50 {
+  width: 50%;
+}
+
+.h-100 {
+  height: 100% !important;
+}
+
+.h-50 {
+  height: 50%;
+}
+
+.d-none {
+  display: none;
+}
+
+.rcrm-height-100 {
+  height: 100vh;
+}
+
+.d-block {
+  display: block;
+}
+
+.flex-direction-col {
+  flex-direction: column;
+}
+
+.rcrm-fs-14 {
+  font-size: 14px !important;
+}
+
+.font-weight-500 {
+  font-weight: 500;
+}
+
+.rcrm-text-center {
+  text-align: center;
+}
+
+.rcrm-border-top-dashed {
+  border-top: 1px dashed #e8e8e8;
+}
+
+.rcrm-border-right-dashed {
+  border-right: 1px dashed #e8e8e8;
+}
+
+
+.mdi-account {
+  color: #8DC964 !important;
+}
+
+.mdi-office-building {
+  color: #36D7E3 !important;
+}
+
+.mdi-clipboard-account {
+  color: #FF9393 !important;
+}
+
+.mdi-briefcase {
+  color: #fdcb86 !important;
+}
+
+.mdi-check-all {
+  color: #F7B764 !important;
+}
+
+.icon-appointment {
+  color: #ffc83c !important;
+}
+
+.mdi-fire {
+  color: #FF3860 !important;
+}
+
+// .is-loading{
+//     display: flex;
+//     align-items: end;
+//     height: 100vh;
+//     width: 100%;
+//       position: absolute;
+//     background-color: #00000075;
+//     top: 0;
+//     left: 0;
+//     .spinner{
+//       width: 60px;
+//       margin: auto;
+//       display: inline-block;
+//     }
+// }
+
+
+
+
+$color-white:#ffffff;
+$color-black:#000000;
+
+$color-dashboard:#BE68F0;
+$color-dashboard-active:#F6E7FF;
+
+$color-candidate:#8DC964;
+//$color-candidate-active:#F1FFE8;
+$color-candidate-active:#eafaf0;
+
+// $color-candidate:#2cbd6e;
+// $color-candidate-active:#bbf4d6;
+
+$color-company:#36D7E3;
+$color-company-active:#EBFEFF;
+
+$color-contact:#FF9393;
+$color-contact-active:#FFF2F2;
+
+$color-job:#fdcb86;
+$color-job-active:#fffaec;
+$color-job-secondary:#D9911A;
+
+$color-mailbox:#82aeff;
+$color-mailbox-active:#F5FAFF;
+
+$color-task:#FFE95F;
+$color-task-active:#FFFBDF;
+
+$color-billing:#64EABE;
+$color-billing-active:#EAFFF8;
+
+$color-setting:#838383;
+$color-setting-active:#F3F3F3;
+
+$color-help:#8F8ADA;
+$color-help-active:#F2F1FF;
+
+$color-task1:#f7b764;
+$color-task1-active:#fffee6;
+
+$color-calllog:#797979;
+$color-calllog-active:#F2F1FF;
+
+
+$color-report:#43dab7;
+$color-report-active:#e3fde5;
+$color-note:#43b5aa;
+
+
+.bg-dashboard {
+  background-color: $color-dashboard-active;
+}
+
+.bg-candidate {
+  background-color: $color-candidate-active;
+}
+
+.bg-company {
+  background-color: $color-company-active;
+}
+
+.bg-contact {
+  background-color: $color-contact-active;
+}
+
+.bg-job {
+  background-color: $color-job-active;
+}
+
+.bg-mailbox {
+  background-color: $color-mailbox-active;
+}
+
+.bg-task {
+  background-color: $color-task-active;
+}
+
+.bg-billing {
+  background-color: $color-billing-active;
+}
+
+.bg-setting {
+  background-color: $color-setting-active;
+}
+
+.bg-help {
+  background-color: $color-help-active;
+}
+
+.bg-task1 {
+  background-color: $color-task1-active;
+}
+
+.bg-calllog {
+  background-color: $color-calllog-active;
+}
+
+
+.color-dashboard {
+  color: $color-dashboard;
+}
+
+.color-candidate {
+  color: $color-candidate;
+}
+
+.color-company {
+  color: $color-company;
+}
+
+.color-contact {
+  color: $color-contact;
+}
+
+.color-job {
+  color: $color-job;
+}
+
+.color-job-secondary {
+  color: $color-job-secondary;
+}
+
+.color-mailbox {
+  color: $color-mailbox;
+}
+
+.color-task {
+  color: $color-task;
+}
+
+.color-billing {
+  color: $color-billing;
+}
+
+.color-setting {
+  color: $color-setting;
+}
+
+.color-help {
+  color: $color-help;
+}
+
+.color-task1 {
+  color: $color-task1;
+}
+
+.color-calllog {
+  color: $color-calllog;
+}
+
+
+
+
+
+.border-dashboard {
+  border: 1px solid $color-dashboard;
+}
+
+.border-candidate {
+  border: 1px solid $color-candidate;
+}
+
+.border-company {
+  border: 1px solid $color-company;
+}
+
+.border-contact {
+  border: 1px solid $color-contact;
+}
+
+.border-job {
+  border: 1px solid $color-job;
+}
+
+.border-job-secondary {
+  border: 1px solid $color-job-secondary;
+}
+
+.border-mailbox {
+  border: 1px solid $color-mailbox;
+}
+
+.border-task {
+  border: 1px solid $color-task;
+}
+
+.border-billing {
+  border: 1px solid $color-billing;
+}
+
+.border-setting {
+  border: 1px solid $color-setting;
+}
+
+.border-help {
+  border: 1px solid $color-help;
+}
+
+.border-task1 {
+  border: 1px solid $color-task1;
+}
+
+.border-calllog {
+  border: 1px solid $color-calllog;
+}
+
+.color-primary {
+  color: $color-primary;
+}
+.color-note {
+    color: #43b5aa;
+}
+.bg-note {
+    background-color: #cefaf6;
+}

@@ -1,0 +1,83 @@
+.rcrm-ext-container{
+    position: fixed;
+    height: 100vh;
+    background: white;
+    right: 0;
+    top:0;
+    z-index: 100000;
+    visibility: visible
+ }
+ .rcrm-ext-iframe{
+   width: 340px;
+    height: 100%;
+    box-shadow: 0 10px 16px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19) !important;
+ }
+ .pv-interests-modal .pv-interests-list{
+    padding-left: 5px;
+ }
+ .pv-interests-section ul.pv-profile-section__section-info{
+   padding-top: 15px;
+   padding-left: 15px; 
+ }
+ .rcrm-ctp-span {
+    position: absolute;
+    top: -20%;
+    left: -0.5%;
+    z-index: 1;
+ }
+ .pv-volunteering-entity .rcrm-ctp-span {
+    top: 11%;
+    left: 2%;
+ }
+ .pv-certification-entity .rcrm-ctp-span {
+    top: 11%;
+    left: 2%;
+ }
+ .pv-recommendation-entity__header .rcrm-ctp-span {
+    top: -8%;
+    left: -4%;
+ }
+ .pv-interests-section .rcrm-ctp-span {
+    top: -20%;
+    left: -3%;
+ }
+ .entity-result .entity-result__image .rcrm-ctp-span {
+    top: -27.5%;
+    left: -17.5%;
+ }
+ .feed-shared-actor .rcrm-ctp-span {
+    top: -3%;
+    left: 1.25%;
+ }
+ .rcrm-ctp{
+    border-radius: 50%;
+    height: 18px;
+    width: 18px;
+    padding: 0;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0;
+    line-height: 20px !important;
+    background: blue;
+    color: white;
+    border-color: blue;
+ }
+
+.pos-abs {
+    position: absolute;
+}
+.pos-rel {
+    position: relative;
+}
+.r-0{
+    right: 0;
+}
+.t-5p{
+    top:5%
+}
+
+.select2-selection__choice {
+   white-space: normal !important;
+   word-break: break-word;
+   height: auto !important;
+}

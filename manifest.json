@@ -1,0 +1,57 @@
+{
+  "action": {
+    "default_popup": "views/home.html",
+    "default_icon": {
+      "128": "assets/images/logo-128.png",
+      "16": "assets/images/logo-16.png",
+      "32": "assets/images/logo-32.png",
+      "48": "assets/images/logo-48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "description": "Source candidates & clients from anywhere with the handy Recruit CRM extension (reverse-engineered variant with improved LinkedIn scraping)",
+  "manifest_version": 3,
+  "name": "Recruit CRM Sourcing Extension (Reverse Engineered)",
+  "version": "3.2.0",
+  "icons": {
+    "128": "assets/images/logo-128.png",
+    "16": "assets/images/logo-16.png",
+    "32": "assets/images/logo-32.png",
+    "48": "assets/images/logo-48.png"
+  },
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "storage",
+    "privacy"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://app.recruitcrm.io/*",
+    "https://albatross.recruitcrm.io/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.linkedin.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "views/*",
+        "assets/*",
+        "assets/js/jquery.3.7.1.min.js",
+        "assets/js/materialize.min.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

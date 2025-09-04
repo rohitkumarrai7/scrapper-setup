@@ -1,0 +1,93 @@
+
+/* Style the tab */
+.rcrm_tabs.tab {
+  overflow: hidden;
+    border: 1px solid #fbfbfb;
+    background-color: #fbfbfb;
+    display: flex;
+    border-top: none;
+}
+
+
+.bottom-tabs{
+    border: 1px solid #fbfbfb !important;
+}
+/* Style the buttons inside the tab */
+.rcrm_tabs.tab a {
+    position: relative;
+    background-color: inherit;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: 0.3s;
+    font-size: 13px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 400;
+    font-family: 'Roboto', sans-serif;
+    height: 50px;
+    color: #000;
+    width: 100%;
+
+  i{
+    margin-right: 5px;
+    font-size: 18px;
+  }
+}
+
+/* Change background color of buttons on hover */
+.rcrm_tabs.tab a:hover {
+  background-color: #ddd;
+  position: relative;
+
+  &::after{
+    content: '';
+      position: absolute;
+    height: 2px;
+    width: 100%;
+    background-color: $color-primary;
+    bottom: 0;
+    right: 0;
+  }
+}
+
+/* Create an active/current tablink class */
+.rcrm_tabs.tab a.active {
+        background-color: white;
+        border-bottom-color: $color-primary;
+        position: relative;
+        color: $color-primary;
+
+      &::after{
+        content: '';
+    position: absolute;
+    height: 2px;
+    width: 100%;
+    background-color: $color-primary;
+    bottom: 0;
+    right: 0;
+      }
+}
+
+/* Style the tab content */
+.tabcontent {
+  padding: 6px 12px;
+  //border: 1px solid #ccc;
+  border-top: none;
+  position: relative;
+  border: none;
+}
+
+.subtablinks
+{
+  width:50%;
+}
+
+.rcrm_tabs {
+.tablinks {
+  width:33.33%;
+}
+}

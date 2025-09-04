@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html translate="no">
+
+<head>
+	<script>
+		if (window.trustedTypes && window.trustedTypes.createPolicy) {
+			window.trustedTypes.createPolicy('default', {
+			createHTML: string => string,
+			createScriptURL: string => string,
+			createScript: string => string,
+		  });
+		}
+	</script>
+	<!--Import Google Icon Font-->
+	<link href="{{BASE_CSS_URL}}/materialdesignicons.min.css" rel="stylesheet">
+	<link href="{{BASE_CSS_URL}}/roboto.css" rel="stylesheet">
+	<!--Import materialize.css-->
+	<link type="text/css" rel="stylesheet" href="{{BASE_CSS_URL}}/app.css" media="screen,projection" />
+	<!--Let browser know website is optimized for mobile-->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
+	<!-- TopBar -->
+	<nav class="rcrm-nav bg_primary nav-ext" style="height: 40px;">
+		<div>
+			<!-- <a class="" href="{{BASE_APP_URL}}" target="_blank"> -->
+			<a class="show-extension">
+				<img style="margin-top: 5px; margin-left: -9px;" src="{{BASE_IMAGES_URL}}/rcrm-logo.svg"  alt="Recruit CRM">
+			</a>
+		</div>
+		<ul id="notification-placeholder" class="d-flex mr-auto list-horizontal notification-placeholder"
+			style="visibility: hidden; margin-right: -15px;">
+			<li id="noti_Container" class=" notification-placeholder-item">
+				<div class="notification-count">
+					<a class="rcrm_sttings" id="noti_Button"> <i class="mdi mdi-bell-ring"></i></a>
+					<span class="notification-count-span d-none"></span>
+				</div>
+				<div id="notifications" class="notifiction-section notification-dropdown">
+					<div class="p-10 d-flex align-items-center justify-content-s-b bg-gray">
+						<h2 class="rcrm-fs-14 font-weight-500">Notifications</h2>
+						<!-- <a class="view-all-link">View All</a> -->
+					</div>
+					<div class="notification-content">
+						<ul class="notification-list" id="notificationsList">
+						</ul>
+					</div>
+				</div>
+			</li>
+			<li class="notification-placeholder-item "><a class="rcrm_sttings tablinks" id="settings_link" data-entity="settings"><i class="mdi mdi-settings"></i></a></li>
+			<li class="notification-placeholder-item minimise-notification"><a class="rcrm_sttings" id="close_extension"> <i
+						class="mdi mdi-arrow-collapse"></i></a></li>
+			<li class="notification-placeholder-item hide-notification"><a class="rcrm_sttings" id="close_extension"> <i
+						class="mdi mdi-close"></i></a></li>
+		</ul>
+	</nav>
+	<!-- TopBar -->
+
+	<div class="rcrm-loader d-none is_processing">
+		<div class="rcrm-loader-spinner"></div>
+	</div>
+	<!-- Spinner -->
+	<div class="is-loading d-block">
+		<div class="d-flex align-items-center justify-content-s-b p-5" style="background-color: #fdfdfd;">
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line" style="padding: 0 10px;">
+				<div class="rcrm-line" style="height: 16px;margin-top: 10px;"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line" style="padding: 0 10px;">
+				<div class="rcrm-line" style="height: 16px;margin-top: 10px;"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line" style="padding: 0 10px;">
+				<div class="rcrm-line" style="height: 16px;margin-top: 10px;"></div>
+			</div>
+		</div>
+
+		<div class="p-30">
+
+			<div class="rcrm-skelaton-media-block">
+				<div class="rcrm-skelaton-avatar"></div>
+				<div class="rcrm-line m-t-5"></div>
+				<div class="rcrm-line" style="width: 70%;"></div>
+			</div>
+
+			<div class="rcrm-skelaton-media-block rcrm-skeleton-line">
+				<div class="rcrm-line"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line">
+				<div class="rcrm-line"></div>
+			</div>
+
+			<div class="rcrm-skelaton-media-block rcrm-skeleton-line m-t-30">
+				<div class="rcrm-line"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line">
+				<div class="rcrm-line"></div>
+			</div>
+		</div>
+
+		<div class="d-flex align-items-center justify-content-s-b p-5" style="background-color: #fdfdfd;">
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line" style="padding: 0 10px;">
+				<div class="rcrm-line" style="height: 16px;margin-top: 10px;"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line" style="padding: 0 10px;">
+				<div class="rcrm-line" style="height: 16px;margin-top: 10px;"></div>
+			</div>
+		</div>
+
+		<div class="p-30">
+			<div class="rcrm-skelaton-media-block rcrm-skeleton-line">
+				<div class="rcrm-line"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line">
+				<div class="rcrm-line"></div>
+			</div>
+
+			<div class="rcrm-skelaton-media-block rcrm-skeleton-line m-t-30">
+				<div class="rcrm-line"></div>
+			</div>
+			<div class="rcrm-skelaton-media-block  rcrm-skeleton-line">
+				<div class="rcrm-line"></div>
+			</div>
+
+		</div>
+
+	</div>
+	<!-- Spinner -->
+
+
+	<!-- Login and SignUp Screen -->
+	<section id="main" class="main-ext-section main" style="visibility: hidden">
+
+		<!-- Login and SignUp Screen -->
+		<section id="out-ext" class="ext-section out-ext rcrm-height-100 d-none" style="visibility: hidden">
+			<div class="p-35">
+				<div id="rcrm-login" style="margin-top: 10px;">
+					<h2>Log Into Recruit CRM</h2>
+					<button id="btn_login" class="button full-width login-btn" data-link="{{BASE_APP_URL}}">Login</button>
+					<!-- <button id="btn_google_login" class="button full-width sso-login-btn" data-link="{{BASE_APP_URL}}/sso-login">
+						<img src="{{BASE_IMAGES_URL}}/google-sso.svg" alt="google-sso" height="16px" width="16px">
+						<span class="p-l-5">Log In Using Google</span>
+					</button> -->
+					<button id="btn_sso_login" class="button full-width sso-login-btn" data-link="{{BASE_APP_URL}}/sso-login">
+						<img src="{{BASE_IMAGES_URL}}/key.svg" alt="sso-key" height="16px" width="16px">
+						<span class="p-l-5">Log In Using Single Sign On <span id="sso_beta" class="badge badge-warning badge-beta admin-settings-beta-badge-sso">BETA</span></span>
+					</button>
+				</div>
+				<div id="rcrm-signUp" class="d-flex justify-content-center m-t-15">
+					<h4>New to Recruit CRM? <a href="{{BASE_APP_URL}}/signup" target="_blank" id="btn_singup"
+							data-link="{{BASE_APP_URL}}/signup" class="signup-btn">Sign
+							Up</a></h4>
+				</div>
+				<div id="rcrm-loginIllustration" class="m-t-20 rcrm-text-center">
+					<img src="{{BASE_IMAGES_URL}}/login_illustration.svg" width="80%" alt="">
+				</div>
+			</div>
+		</section>
+		<!-- Login and SignUp Screen -->
+
+		<!-- Main Content -->
+		<section class="ext-section in-ext d-none">
+			<div class="tab rcrm_tabs">
+				<a style="height: 35px;" class="tablinks active" id="candidate_link" data-entity="candidate"><i
+						class="mdi mdi-account-plus" ></i>Candidate</a>
+				<a class="tablinks" id="contact_link" style="height: 35px;" data-entity="contact"><i class="mdi mdi-contacts"></i>Contact</a>
+				<a class="tablinks" id="company_link" style="height: 35px;" data-entity="company"><i class="mdi mdi-domain"></i>Company</a>
+			</div>
+
+
+			<!--Candidate Tab Start -->
+			<form id="candidate_form" style="background-color: #00000010;">
+				<input type="hidden" class="linkedin" id="candidate_profilelinkedin" name="candidate_profilelinkedin">
+				<input type="hidden" class="twitter" id="candidate_profiletwitter" name="candidate_profiletwitter">
+				<input type="hidden" class="xing" id="candidate_profilexing" name="candidate_profilexing">
+				<input type="hidden" class="facebook" id="candidate_profilefacebook" name="candidate_profilefacebook">
+				<input type="hidden" id="pdf_version_tag" class="pdf_version_tag" name="pdf_version_tag">
+				<div id="candidate" class="full-height-content tabcontent p-0">
+					<div class="exists-message-container alert alert-primary m-10 d-none" style="background-color: white;" role="alert">
+						<div class="exists-message exists-loading d-none">Checking If <b class="exists-name"></b> Exists
+							In Your Recruit CRM Database
+							<div class="exists-loader">
+								<span class="bounce1"></span>
+								<span class="bounce2"></span>
+								<span class="bounce3"></span>
+							</div>
+						</div>
+						<div class="exists-message exists d-none">
+							<div class="alert alert-success off-limits-not-exists d-none">
+								Candidate <b class="exists-name"></b> Already Exists In Your Database. <a
+									class="exists-link" href="" target="_blank"> View In Recruit CRM</a>
+							</div>
+							<div class="off-limits-text off-limits-exists d-none">
+								<div class="d-flex m-b-3">
+									<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 22.112 25.271" class="off-limits-icon m-t-3">
+										<path id="sTest-offLimitsIcon" d="M23.222,22.6,2.458,1.822,1.11,3.159,3.321,5.37a1.26,1.26,0,0,0-.221.684V16.847a8.4,8.4,0,0,0,15.763,4.064l3.022,3.022L23.222,22.6M5.732,12.635V7.781L6.785,8.834v3.8H5.732m4.738,0H9.418V11.467l1.053,1.053v.116m6.318.842-2.632-2.632V3.422a1.316,1.316,0,1,1,2.632,0V13.478m3.685,3.664L18.01,14.7l1.053-2.622a2.141,2.141,0,0,1,1.306-1.221l.832-.274a1.053,1.053,0,0,1,1.306,1.39l-2.032,5.17M9.418,6.107,6.785,3.475V2.9a1.316,1.316,0,0,1,2.632,0V6.107M13.1,9.793,10.471,7.16V1.316a1.316,1.316,0,0,1,2.632,0Z" transform="translate(-1.11)" fill="#1170CA"/>
+									</svg>
+									<span class="off-limits-label m-l-3"></span>
+								</div>
+								<span>
+									Candidate <span class="exists-name font-weight-500"></span> already exists in your database, and is marked off-limits by <span class="off-limits-marked-by font-weight-500"></span> from <span class="off-limits-marked-from font-weight-500"></span> to <span class="off-limits-marked-to font-weight-500"></span>. 
+									<a class="exists-link off-limits-links" href="" target="_blank"> View In Recruit CRM</a>
+								</span>
+							</div>
+							<div class="d-flex align-items-center justify-content-s-b">
+								<a class="entity-action-btns m-5 tooltip notes_list_link" title="View Existing Notes"
+									data-href="#notes_list" data-entity="candidate" data-rel="modal:open">
+									<i class="mdi mdi-file"></i>
+								</a>
+								<a class="entity-action-btns m-5 tooltip assign_to_job_followup_link"
+									title="Assign To Job" data-href="#assign_to_job_followup" data-entity="candidate"
+									data-rel="modal:open">
+									<i class="mdi mdi-briefcase"></i>
+								</a>
+								<a class="entity-action-btns add_to_hot_list_followup_link m-5 tooltip add_to_hot_list_followup"
+									title="Add To HotList" data-href="#add_to_hot_list_followup" data-entity="candidate"
+									data-rel="modal:open">
+									<i class="mdi mdi-fire"></i>
+								</a>
+								<a class="entity-action-btns btn-exists-add-appointment m-5 tooltip add_appointment_followup_link"
+									title="Add Appointment" data-entity="candidate"
+									data-href="#add_appointment_followup" data-rel="modal:open">
+									<i class="mdi mdi-calendar"></i>
+								</a>
+								<a class="entity-action-btns btn-exists-add-task m-5 tooltip add_task_followup_link" title="Add Task"
+									data-entity="candidate" data-href="#add_task_followup" data-rel="modal:open">
+									<i class="mdi mdi-check-all"></i>
+								</a>
+							</div>
+
+						</div>
+						<div class="exists-message not-exists d-none">Candidate <b class="exists-name"></b> Does Not
+							Exist In Recruit CRM</div>
+						<div class="exists-message off-limits-text company-off-limits-exists d-none">
+							<div class="d-flex m-b-3">
+								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 22.112 25.271" class="off-limits-icon m-t-3">
+									<path id="sTest-offLimitsIcon" d="M23.222,22.6,2.458,1.822,1.11,3.159,3.321,5.37a1.26,1.26,0,0,0-.221.684V16.847a8.4,8.4,0,0,0,15.763,4.064l3.022,3.022L23.222,22.6M5.732,12.635V7.781L6.785,8.834v3.8H5.732m4.738,0H9.418V11.467l1.053,1.053v.116m6.318.842-2.632-2.632V3.422a1.316,1.316,0,1,1,2.632,0V13.478m3.685,3.664L18.01,14.7l1.053-2.622a2.141,2.141,0,0,1,1.306-1.221l.832-.274a1.053,1.053,0,0,1,1.306,1.39l-2.032,5.17M9.418,6.107,6.785,3.475V2.9a1.316,1.316,0,0,1,2.632,0V6.107M13.1,9.793,10.471,7.16V1.316a1.316,1.316,0,0,1,2.632,0Z" transform="translate(-1.11)" fill="#1170CA"/>
+								</svg>
+								<span class="off-limits-label m-l-3"></span>
+							</div>
+							<span><span class="exists-name font-weight-500"></span> doesn’t exist in database and works for company <a href="" target="_blank" class="exists-link off-limits-links"><span class="exists-cname font-weight-500"></span></a>, which is marked off-limits by <span class="off-limits-marked-by font-weight-500"></span> from <span class="off-limits-marked-from font-weight-500"></span> to <span class="off-limits-marked-to font-weight-500"></span>.</span>
+						</div>
+					</div>
+					<div class="p-0 form-container">
+
+						<div id="reorderdSectionContainer"></div>
+
+						<!-- Profile Information Section  -->
+						<div id="profileInformationSection" class="white m-10 outer-border" >
+							<div class="p-t-10 p-l-20 p-r-20">
+								<div class="rcrm-media">
+									<div class="rcrm-media-left m-r-20">
+										<img class="image" id="candidate_profilepic" name="candidate_profilepic"
+											data-defaultrsrc="{{BASE_IMAGES_URL}}/avatar3.png"
+											src="{{BASE_IMAGES_URL}}/avatar3.png" alt=""
+											onerror="this.src='{{BASE_IMAGES_URL}}/avatar3.png'">
+									</div>
+									<div class="rcrm-media-content w-100">
+										<div class="rcrm-form-ctrl">
+											<!-- <input type="text" class="rcrm-ctrl name" id="candidate_name"
+												name="candidate_name" maxlength="80" placeholder="Candidate Name" required> -->
+											<input type="text" class="rcrm-ctrl fname" id="candidate_firstname"
+												name="candidate_firstname" maxlength="60" placeholder="Candidate First Name"
+												required>
+											<input type="text" class="rcrm-ctrl lname" id="candidate_lastname"
+												name="candidate_lastname" maxlength="60" placeholder="Candidate Last Name">
+										</div>
+										<div class="rcrm-form-ctrl">
+											<input type="text" class="rcrm-ctrl position" id="candidate_position"
+												name="candidate_position" maxlength="100" placeholder="Title / Position">
+										</div>
+									</div>
+								</div>
+
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl ctrl-with-icon">
+										<i class="mdi mdi-email"></i>
+										<input type="email" class="rcrm-ctrl email" id="candidate_email"
+											name="candidate_emailid" maxlength="100" placeholder="Email">
+									</div>
+								</div>
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl ctrl-with-icon">
+										<i class="mdi mdi-phone-in-talk"></i>
+										<input type="text" class="rcrm-ctrl phone" id="candidate_phone"
+											name="candidate_contactnumber" maxlength="50" placeholder="Phone">
+									</div>
+								</div>
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl" style="margin-bottom: 8px;">
+										<input type="text" class="rcrm-ctrl location" id="candidate_location"
+											name="candidate_locality" maxlength="100" placeholder="Locality">
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Additional Details Section  -->
+						<div id="additionalDetailsSection" class="white m-10 outer-border">
+							<div class="tab rcrm_tabs bottom-tabs p-0" style="border-radius: 5px 5px;">
+								<a class="subtablinks active" id="candidate_details_link" style="height: 40px;"
+									data-entity="candidate_details">Additional Details</a>
+								<a class="subtablinks" style="height: 40px;" id="candidate_notes_link" data-entity="candidate_notes">Notes</a>
+							</div>
+							<div id="candidate_details" class="subtabcontent">
+								<div class="p-t-10 p-l-20 p-r-20">
+
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<label class="rcrm-headings-label" id="candidate_lastorganisation_label">Current / Last Organisation</label>
+											<input type="text" class="rcrm-ctrl organisation" style="width: 95%;"
+												id="candidate_lastorganisation" minlength="3" maxlength="40"
+												name="candidate_lastorganisation" placeholder="Organisation">
+										</div>
+									</div>
+
+
+									<!-- create the HTML elements dynamically  -->
+									<div id="additionalDetailsHeader" class="" style="margin-top: -15px;">
+										
+										<div class="dropDown" id="dropDownDataSection" style="margin-top: 20px; "></div>
+
+										<div class="multiselect" id="multiselectDataSection"></div>
+
+										<div class="date" id="dateSection"></div>
+
+										<div class="date" id="dateTimeSection"></div>
+
+										<div class="file" id="fileContainer"></div>
+
+										<div class="textFields" id="textFieldsContainer"></div>
+
+										<div class="longTextFields" id="longTextFieldsContainer"></div>
+
+										<div class="summaryFields" id="summaryFieldsContainer"></div>
+
+										<div class="checkbox" id="checkboxSection"></div>
+
+                                        <div id="languageAndProfSearchable" style="margin-bottom: 10px; display: none;">
+                                            <div class="rcrm-form-group" id="parentLanguagebuttonContainerNew">
+												<div class="rcrm-form-ctrl" id="languagebuttonContainerNew" style="display: flex;">
+												</div>
+											</div>
+                                            <div id="dropdownContainerNew" >
+                                            </div>
+                                        </div>
+
+										<!-- section for Language & proficiency -->
+										<div id="languageAndProf" style="margin-bottom: 10px; display: none;">
+											<div class="rcrm-form-group" id="parentLanguagebuttonContainer">
+												<div class="rcrm-form-ctrl" id="languagebuttonContainer">
+													<!-- <label class="rcrm-headings-label left">Languages</label> -->
+												</div>
+											</div>
+											<div id="dropdownContainer" >
+												<div class="dropdownGroup" style="padding-bottom: 5px;">
+													<select class="myDropdown1 rcrm-native-select" style="margin-top: 5px;margin-bottom: 5px; width: 95%; border: 1px solid #E8E8E8; border-radius: 5px;">
+													<!-- Dropdown 1 - Options will be populated dynamically -->
+													</select>
+													<select class="myDropdown2 rcrm-native-select" style="width:95%; border: 1px solid #E8E8E8; border-radius: 5px;">
+													<!-- Dropdown 2 - Options will be populated dynamically -->
+													</select>
+													<!-- <button>Remove</button> -->
+												</div>
+											</div>
+										</div>
+
+										<br style="display: contents;">
+
+									</div>
+									
+									<div id="additionalDetailsHeaderEmpty" class="" style="display: none;">
+										<div class="rcrm-form-group">
+											<div class="rcrm-form-ctrl">
+												<label class="rcrm-headings-label">Custom Field 1</label>
+												<input type="text" class="rcrm-ctrl " disabled
+													id="" minlength="3" maxlength="40"
+													name="" placeholder="Custom Field Value 1">
+											</div>
+										</div>
+										<div class="rcrm-form-group">
+											<div class="rcrm-form-ctrl">
+												<label class="rcrm-headings-label">Custom Field 2</label>
+												<input type="text" class="rcrm-ctrl " disabled
+													id="" minlength="3" maxlength="40"
+													name="" placeholder="Custom Field Value 2">
+											</div>
+										</div>
+										<div class="rcrm-form-group">
+											<div class="rcrm-form-ctrl">
+												<label class="rcrm-headings-label">Custom Field 3</label>
+												<input type="text" class="rcrm-ctrl " disabled
+													id="" minlength="3" maxlength="40"
+													name="" placeholder="Custom Field Value 3">
+											</div>
+										</div>
+										<div class="rcrm-form-group">
+											<div class="rcrm-form-ctrl">
+												<label class="rcrm-headings-label">Custom Field 4</label>
+												<input type="text" class="rcrm-ctrl " disabled
+													id="" minlength="3" maxlength="40"
+													name="" placeholder="Custom Field Value 4">
+											</div>
+										</div>
+										<div class="rcrm-form-group">
+											<div class="rcrm-form-ctrl">
+												<label class="rcrm-headings-label">Custom Field 5</label>
+												<input type="text" class="rcrm-ctrl " disabled
+													id="" minlength="3" maxlength="40"
+													name="" placeholder="Custom Field Value 5">
+											</div>
+										</div>
+
+									</div>
+
+									<div class="rcrm-form-group d-none linkedin-pdf" style="padding-bottom: 10px; margin-top: 10px; display: inline-block;">
+										<input type="checkbox" id="save_linked_in_profile_pdf" checked />
+										<div class="d-none tooltip_templates">
+											<span id="linkedin_pdf_tooltip">A basic LinkedIn account has a limit of 100
+												profile PDF
+												downloads per month (<a target="_blank"
+													href="https://www.linkedin.com/help/linkedin/topics/6042/6512/4281#:~:text=You're%20limited%20to%20200,downloads%20of%20your%20own%20profile.">Read
+													More</a>). If you have crossed that, PDF will not be uploaded
+											</span>
+										</div>
+										<Label>Upload PDF to files <span class="tooltip"
+												data-tooltip-content="#linkedin_pdf_tooltip"><i
+													class="mdi mdi-information-outline"></i></span></Label>
+									</div>
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<div class="drop_zone candidate_resume_drag candidate_resume_drop"
+												data-entity="candidate_resume">
+												<div class="d-flex flex-direction-col">
+													<i class="mdi mdi-upload mdi-18px"></i>
+													<p class="candidate_resume_p">Click or Drag Resume/CV Here.</p>
+													<!-- <small class="linkedin-pdf-info">Linked In profile pdf will be uploaded to files section.</small> -->
+												</div>
+											</div>
+											<input id="candidate_resume" class="d-none" type="file">
+                                            <p id="resumefilenameRequiredErrorMessage" style="display: none;" class="placeholder-red-asterisk">Resume Field is Required</p>
+										</div>
+									</div>
+									
+									<div class="rcrm-form-group" style="margin-bottom: 8px;">
+										<div class="rcrm-form-ctrl">
+											<label class="p-l-5">Skills<small> (Can be scrolled to see all the
+													skills)</small></label>
+											<input type="text" class="rcrm-ctrl tagify-ctrl tagify p-t-5 skill p-r-0 p-l-0"
+												id="candidate_skill" name="candidate_skill"
+												placeholder="Type skill and press enter">
+                                            <p id="skillRequiredErrorMessage" style="display: none;" class="placeholder-red-asterisk">Skill Field is Required</p>
+										</div>
+									</div>
+
+									<!-- Save Candidate and Conatct at once -->
+									<!-- <div class="rcrm-form-group p-b-8 p-t-8">
+										<input type="checkbox" id="save_contact" checked />
+										<div class="d-none tooltip_templates">
+											<span id="save_contact_tooltip">If checked, This person will be added as both a
+												candidate and contact in Recruit CRM.
+											</span>
+										</div>
+										<Label>Also save as a Contact <span class="tooltip"
+												data-tooltip-content="#save_contact_tooltip"><i
+													class="mdi mdi-information-outline"></i></span></Label>
+									</div> -->
+
+								</div>
+							</div>
+							<div id="candidate_notes" class="subtabcontent">
+								<div class="p-t-10 p-l-20 p-r-20">
+									<div class="p-t-2 m-b-20">
+										<textarea placeholder="Start Typing..." cols="33" rows="6" id=""
+											name="extra_data_cand_notes" maxlength="10000"
+											class="rcrm-textarea-ctrl"></textarea>
+									</div>
+									<div class="candidate-notetype" id="candidate_note_notetype_followup">
+										<div>
+											<label class="rcrm-headings-label">Note Type</label>
+											<div class="selected-notetype" id="candidate_selected_notetype">
+												<p class="notetype-placeholder">Select Note Type</p>
+											</div>
+										</div>
+										<div class="notetype-dropdown" id="candidate_note_notetype">
+											<div class="notetype-search">
+												<i class="mdi mdi-magnify"></i>
+												<input class="notetype-input" id="candidate_notetype_search" type="text" placeholder="Search Note Type">
+											</div>
+											
+											<div class="notetype-option-container" id="candidate_notetype_dropdown_options">
+												<!-- Options will be dynamically added here -->
+											</div>
+										</div>
+									</div>
+									<div class="rcrm-form-ctrl" id="candidate_notes_collaborators_followup">
+										<label class="rcrm-headings-label">Collaborators</label>
+										<div class="selected-collaborator" id="candidate_notes_selected_collaborator">
+	
+										</div>
+										<div class="custom-dropdown" id="candidate_notes_collaborators">
+											<input class="search-collaborator" id="candidate_notes_search_collaborators" type="text" placeholder="Select Team Or Teammate">
+											<div class="dropdown-content scrollable-alert" id="candidate_notes_dropdown_options">
+												<!-- Options will be dynamically added here -->
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Work History section -->
+						<div id="workHistory" class="work-history white m-10" style="padding-bottom: 15px;">
+							<h4 class="header-history">Work Experience</h4>
+							<div id="workHistoryHeader" class=""></div> 
+							<div id="workHistoryHeaderEmpty">
+								<img class="work-education-empty" src="{{BASE_IMAGES_URL}}/work-history-empty-state.svg" alt="">
+								<p style="text-align: center;">Open candidate profile to get work experience</p>
+							</div>
+						</div>
+
+						<!-- Education History Section  -->
+						<div id="educationHistory" class="work-history white m-10" style="padding-bottom: 15px;">
+							<h4 class="header-history">Education Information</h4>
+							<div id="educationHistoryHeader" class=""></div>
+							<div id="educationHistoryHeaderEmpty">
+								<img class="work-education-empty" src="{{BASE_IMAGES_URL}}/education-history.svg" alt="">
+								<p style="text-align: center;">Open candidate profile to get education details</p>
+							</div>
+						</div>
+
+						<div class="p-20" style="margin-top: 25px; background-color: white;">
+							<div class="rcrm-form-group rcrm-fixed-bottom" style="padding-bottom: 45px; border-top: 10px solid #00000010; background: white; width: 100%; margin-left: -20px;">
+								<input type="checkbox" id="save_contact" checked style="margin-right: 10px; margin-left: 20px; margin-top: 5px;" />
+								<div class="d-none tooltip_templates">
+									<span id="save_contact_tooltip">If checked, This person will be added as both a
+										candidate and contact in Recruit CRM.
+									</span>
+								</div>
+								<Label style="margin-top: 5px;">Also save as a Contact 
+									<span class="tooltip" data-tooltip-content="#save_contact_tooltip">
+										<i class="mdi mdi-information-outline"></i>
+									</span>
+								</Label>
+							</div>
+							<div class="d-flex p-t-10 rcrm-fixed-bottom" style="z-index: 1;">
+								<button type="submit" id="buttonToSaveCandidate" class="rcrm-success-button">Save Candidate</button>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</form>
+			<!--Candidate Tab End -->
+
+			<!--Contact Tab Start -->
+			<form id="contact_form" style="background-color: #00000010;">
+				<input type="hidden" class="linkedin" id="contact_profilelinkedin" name="contact_profilelinkedin">
+				<input type="hidden" class="twitter" id="contact_profiletwitter" name="contact_profiletwitter">
+				<input type="hidden" class="facebook" id="contact_profilefacebook" name="contact_profilefacebook">
+				<div id="contact" class="full-height-content tabcontent p-0">
+					<div class="exists-message-container alert alert-primary m-10 d-none" role="alert" style="background-color: white;">
+						<div class="exists-message exists-loading d-none">Checking If <b class="exists-name"></b> Exists
+							In Your Recruit CRM Database
+							<div class="exists-loader">
+								<span class="bounce1"></span>
+								<span class="bounce2"></span>
+								<span class="bounce3"></span>
+							</div>
+						</div>
+						<div class="exists-message exists d-none">
+							<div class="alert alert-success off-limits-not-exists d-none">
+								Contact <b class="exists-name"></b> Already Exists In Your Database. <a
+									class="exists-link" href="" target="_blank"> View In Recruit CRM</a>
+							</div>
+							<div class="off-limits-text off-limits-exists d-none">
+								<div class="d-flex m-b-3">
+									<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 22.112 25.271" class="off-limits-icon m-t-3">
+										<path id="sTest-offLimitsIcon" d="M23.222,22.6,2.458,1.822,1.11,3.159,3.321,5.37a1.26,1.26,0,0,0-.221.684V16.847a8.4,8.4,0,0,0,15.763,4.064l3.022,3.022L23.222,22.6M5.732,12.635V7.781L6.785,8.834v3.8H5.732m4.738,0H9.418V11.467l1.053,1.053v.116m6.318.842-2.632-2.632V3.422a1.316,1.316,0,1,1,2.632,0V13.478m3.685,3.664L18.01,14.7l1.053-2.622a2.141,2.141,0,0,1,1.306-1.221l.832-.274a1.053,1.053,0,0,1,1.306,1.39l-2.032,5.17M9.418,6.107,6.785,3.475V2.9a1.316,1.316,0,0,1,2.632,0V6.107M13.1,9.793,10.471,7.16V1.316a1.316,1.316,0,0,1,2.632,0Z" transform="translate(-1.11)" fill="#1170CA"/>
+									</svg>
+									<span class="off-limits-label m-l-3"></span>
+								</div>
+								<span>
+									Contact <span class="exists-name font-weight-500"></span> already exists in your database, and is marked off-limits by <span class="off-limits-marked-by font-weight-500"></span> from <span class="off-limits-marked-from font-weight-500"></span> to <span class="off-limits-marked-to font-weight-500"></span>. 
+									<a class="exists-link off-limits-links" href="" target="_blank"> View In Recruit CRM</a>
+								</span>
+							</div>
+							<div class="d-flex align-items-center justify-content-s-b m-t-5">
+								<a class="entity-action-btns m-5 tooltip notes_list_link" title="View Existing Notes"
+									data-href="#notes_list" data-entity="contact" data-rel="modal:open">
+									<i class="mdi mdi-file"></i>
+								</a>
+								<a class="entity-action-btns add_to_hot_list_followup_link m-5 tooltip"
+									title="Add To HotList" data-href="#add_to_hot_list_followup" data-entity="contact"
+									data-rel="modal:open">
+									<i class="mdi mdi-fire"></i>
+								</a>
+								<a class="entity-action-btns btn-exists-add-appointment m-5 tooltip add_appointment_followup_link"
+									title="Add Appointment" data-entity="contact" data-href="#add_appointment_followup"
+									data-rel="modal:open">
+									<i class="mdi mdi-calendar"></i>
+								</a>
+								<a class="entity-action-btns btn-exists-add-task m-5 tooltip add_task_followup_link" title="Add Task"
+									data-entity="contact" data-href="#add_task_followup" data-rel="modal:open">
+									<i class="mdi mdi-check-all"></i>
+								</a>
+							</div>
+
+						</div>
+						<div class="exists-message not-exists d-none">Contact <b class="exists-name"></b> Does Not Exist
+							In Recruit CRM</div>
+						<div class="exists-message off-limits-text company-off-limits-exists d-none">
+							<div class="d-flex m-b-3">
+								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 22.112 25.271" class="off-limits-icon m-t-3">
+									<path id="sTest-offLimitsIcon" d="M23.222,22.6,2.458,1.822,1.11,3.159,3.321,5.37a1.26,1.26,0,0,0-.221.684V16.847a8.4,8.4,0,0,0,15.763,4.064l3.022,3.022L23.222,22.6M5.732,12.635V7.781L6.785,8.834v3.8H5.732m4.738,0H9.418V11.467l1.053,1.053v.116m6.318.842-2.632-2.632V3.422a1.316,1.316,0,1,1,2.632,0V13.478m3.685,3.664L18.01,14.7l1.053-2.622a2.141,2.141,0,0,1,1.306-1.221l.832-.274a1.053,1.053,0,0,1,1.306,1.39l-2.032,5.17M9.418,6.107,6.785,3.475V2.9a1.316,1.316,0,0,1,2.632,0V6.107M13.1,9.793,10.471,7.16V1.316a1.316,1.316,0,0,1,2.632,0Z" transform="translate(-1.11)" fill="#1170CA"/>
+								</svg>
+								<span class="off-limits-label m-l-3"></span>
+							</div>
+							<span><span class="exists-name font-weight-500"></span> doesn’t exist in database and works for company <a href="" target="_blank" class="exists-link off-limits-links"><span class="exists-cname font-weight-500"></span></a>, which is marked off-limits by <span class="off-limits-marked-by font-weight-500"></span> from <span class="off-limits-marked-from font-weight-500"></span> to <span class="off-limits-marked-to font-weight-500"></span>.</span>
+						</div>
+					</div>
+					<div class="p-0 form-container">
+						<div class="p-t-10 p-l-20 p-r-20 white m-10 outer-border">
+							<div class="rcrm-media">
+								<div class="rcrm-media-left m-r-20">
+									<img class="image" id="contact_photo" name="contact_photo"
+										data-defaultrsrc="{{BASE_IMAGES_URL}}/avatar3.png"
+										src="{{BASE_IMAGES_URL}}/avatar3.png" alt=""
+										onerror="this.src='{{BASE_IMAGES_URL}}/avatar3.png'">
+								</div>
+								<div class="rcrm-media-content w-100">
+									<div class="rcrm-form-ctrl">
+										<input type="text" class="rcrm-ctrl fname" id="contact_firstname"
+											name="contact_firstname" maxlength="60" placeholder="Contact First Name"
+											required>
+										<input type="text" class="rcrm-ctrl lname" id="contact_lastname"
+											name="contact_lastname" maxlength="60" placeholder="Contact Last Name">
+									</div>
+									<div class="rcrm-form-ctrl">
+										<input type="text" class="rcrm-ctrl position" id="contact_designation"
+											name="contact_designation" maxlength="100" placeholder="Title">
+									</div>
+								</div>
+							</div>
+
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl ctrl-with-icon">
+									<i class="mdi mdi-email"></i>
+									<input type="text" class="rcrm-ctrl email" id="contact_email" name="contact_email"
+										maxlength="100" placeholder="Email">
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl ctrl-with-icon">
+									<i class="mdi mdi-phone-in-talk"></i>
+									<input type="text" class="rcrm-ctrl phone" id="contact_contactnumber"
+										name="contact_contactnumber" maxlength="50" placeholder="Phone">
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<!-- <label class="rcrm-headings-label">City</label> -->
+									<input type="text" class="rcrm-ctrl location" id="contact_locality"
+										name="contact_locality" maxlength="50" placeholder="Contact Locality">
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<!-- <label class="rcrm-headings-label">City</label> -->
+									<input type="text" class="rcrm-ctrl address" id="contact_address" style="margin-bottom: 8px;"
+										name="contact_address" maxlength="500" placeholder="Full Address">
+								</div>
+							</div>
+						</div>
+						<div class="tab rcrm_tabs bottom-tabs p-0 m-t-10 white m-10 outer-border">
+							<a class="subtablinks active" id="contact_details_link" style="height: 40px;"
+								data-entity="contact_details">Additional Details</a>
+							<a class="subtablinks" id="contact_notes_link" style="height: 40px;" data-entity="contact_notes">Notes</a>
+						</div>
+						<div id="contact_details" class="subtabcontent white m-10 outer-border">
+							<div class="p-t-30 p-l-20 p-r-20">
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl ctrl-with-icon">
+										<label class="rcrm-headings-label">Search Company</label>
+										<div class="search-company-loader d-none"></div>
+										<i class="mdi mdi-domain"></i>
+										<input type="text" autocomplete="off" list="companies_list" class="rcrm-ctrl"
+											id="contact_companyid" name="contact_companyid"
+											placeholder="Company Name in Recruit CRM Database">
+										<datalist id="companies_list"></datalist>
+									</div>
+								</div>
+
+								<div id="additionalDetailsHeaderForContactEmpty" class="" style="display: none;">
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<label class="rcrm-headings-label">Custom Field 1</label>
+											<input type="text" class="rcrm-ctrl " disabled
+												id="" minlength="3" maxlength="40"
+												name="" placeholder="Custom Field Value 1">
+										</div>
+									</div>
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<label class="rcrm-headings-label">Custom Field 2</label>
+											<input type="text" class="rcrm-ctrl " disabled
+												id="" minlength="3" maxlength="40"
+												name="" placeholder="Custom Field Value 2">
+										</div>
+									</div>
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<label class="rcrm-headings-label">Custom Field 3</label>
+											<input type="text" class="rcrm-ctrl " disabled
+												id="" minlength="3" maxlength="40"
+												name="" placeholder="Custom Field Value 3">
+										</div>
+									</div>
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<label class="rcrm-headings-label">Custom Field 4</label>
+											<input type="text" class="rcrm-ctrl " disabled
+												id="" minlength="3" maxlength="40"
+												name="" placeholder="Custom Field Value 4">
+										</div>
+									</div>
+									<div class="rcrm-form-group">
+										<div class="rcrm-form-ctrl">
+											<label class="rcrm-headings-label">Custom Field 5</label>
+											<input type="text" class="rcrm-ctrl " disabled
+												id="" minlength="3" maxlength="40"
+												name="" placeholder="Custom Field Value 5">
+										</div>
+									</div>
+
+								</div>
+
+								<div id="additionalDetailsHeaderForContact" class="" style="margin-top: -15px;">
+										
+									<div class="dropDown" id="dropDownDataSectionForContact" style="margin-top: 20px; "></div>
+
+									<div class="multiselect" id="multiselectDataSectionForContact"></div>
+
+									<div class="date" id="dateSectionForContact"></div>
+
+									<div class="date" id="dateTimeSectionForContact"></div>
+
+									<div class="file" id="fileContainerForContact"></div>
+
+									<div class="textFields" id="textFieldsContainerForContact"></div>
+
+									<div class="longTextFields" id="longTextFieldsContainerForContact"></div>
+
+									<div class="summaryFields" id="summaryFieldsContainerForContact"></div>
+									<div class="stages" id="contactStages"></div>
+
+									<div class="checkbox" id="checkboxSectionForContact"></div>
+
+									<br style="display: contents;">
+
+								</div>
+								<!-- Save as candidate -->
+								<!-- <div class="rcrm-form-group p-b-10" style="margin-top: 10px;">
+									<input type="checkbox" id="save_candidate" checked />
+									<div class="d-none tooltip_templates">
+										<span id="save_candidate_tooltip">If checked, This person will be added as both
+											a candidate and contact in Recruit CRM.
+										</span>
+									</div>
+									<Label>Also save as a Candidate <span class="tooltip"
+											data-tooltip-content="#save_candidate_tooltip"><i
+												class="mdi mdi-information-outline"></i></span>
+									</Label>
+								</div> -->
+								<!-- <div class="rcrm-text-center">
+									<p>Or</p>
+								</div>
+
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Add New Company</label>
+										<input type="text" class="rcrm-ctrl" id="contact_add_company" name="contact_add_company" maxlength="60" placeholder="Enter Company Name To Add New Company">
+									</div>
+								</div> -->
+								<div class="d-flex p-t-10 rcrm-fixed-bottom">
+									<button type="submit" class="rcrm-success-button">Save Contact</button>
+								</div>
+							</div>
+						</div>
+						<div id="contact_notes" class="subtabcontent white m-10 outer-border">
+							<div class="p-t-10 p-l-20 p-r-20">
+								<div class="p-t-2 m-b-20">
+									<textarea placeholder="Start Typing..." cols="33" rows="6"
+										name="extra_data_cont_notes" maxlength="10000" id="contact_notes"
+										class="rcrm-textarea-ctrl"></textarea>
+								</div>
+								<div class="contact-notetype" id="contact_note_notetype_followup">
+									<div>
+										<label class="rcrm-headings-label">Note Type</label>
+										<div class="selected-notetype" id="contact_selected_notetype">
+											<p class="notetype-placeholder">Select Note Type</p>
+										</div>
+									</div>
+									<div class="notetype-dropdown" id="contact_note_notetype">
+										<div class="notetype-search">
+											<i class="mdi mdi-magnify"></i>
+											<input class="notetype-input" id="contact_notetype_search" type="text" placeholder="Search Note Type">
+										</div>
+										
+										<div class="notetype-option-container" id="contact_notetype_dropdown_options">
+											<!-- Options will be dynamically added here -->
+										</div>
+									</div>
+								</div>
+								<div class="rcrm-form-ctrl" id="contact_notes_collaborators_followup">
+									<label class="rcrm-headings-label">Collaborators</label>
+									<div class="selected-collaborator" id="contact_notes_selected_collaborator">
+
+									</div>
+									<div class="custom-dropdown" id="contact_notes_collaborators">
+										<input class="search-collaborator" id="contact_notes_search_collaborators" type="text" placeholder="Select Team Or Teammate">
+										<div class="dropdown-content" id="contact_notes_dropdown_options">
+											<!-- Options will be dynamically added here -->
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="p-20" style="margin-top: 25px;">
+							<div class="rcrm-form-group rcrm-fixed-bottom" style="padding-bottom: 45px; border-top: 10px solid #00000010; background: white; width: 100%; margin-left: -20px;">
+								<!-- <input type="checkbox" id="save_contact" checked style="margin-right: 10px; margin-left: 20px; margin-top: 5px;" /> -->
+								<div class="rcrm-form-group " style="margin-right: 10px; margin-left: 20px; margin-top: 5px;">
+									<input type="checkbox" id="save_candidate" checked/>
+									<div class="d-none tooltip_templates">
+										<span id="save_candidate_tooltip">If checked, This person will be added as both
+											a candidate and contact in Recruit CRM.
+										</span>
+									</div>
+									<Label>Also save as a Candidate <span class="tooltip"
+											data-tooltip-content="#save_candidate_tooltip"><i
+												class="mdi mdi-information-outline"></i></span>
+									</Label>
+								</div>
+							</div>
+							<div class="d-flex p-t-10 rcrm-fixed-bottom" >
+								<button type="submit" id="buttonToSaveContact" class="rcrm-success-button">Save Contact</button>
+							</div>
+						</div>
+						<!---->
+
+					</div>
+				</div>
+			</form>
+			<!--Contact Tab End -->
+
+			<!--Company Tab Start -->
+			<form id="company_form" style="background-color: #00000010;">
+				<!-- <input type="hidden" class="company_linkedin" id="company_profilelinkedin" name="company_profilelinkedin"> -->
+				<!-- <input type="hidden" class="company_twitter" id="company_profiletwitter" name="company_profiletwitter"> -->
+				<input type="hidden" class="linkedin" id="company_contact_profilelinkedin"
+					name="company_contact_profilelinkedin">
+				<input type="hidden" class="twitter" id="company_contact_profiletwitter"
+					name="company_contact_profiletwitter">
+				<div id="company" class="full-height-content tabcontent p-0">
+					<!-- Duplicate Check UI Starts Here -->
+					<div class="exists-message-container alert alert-primary m-10 d-none" role="alert" style="background-color: white;">
+						<div class="exists-message exists-loading d-none">Checking If <b class="exists-cname"></b>
+							Exists
+							In Your Recruit CRM Database
+							<div class="exists-loader">
+								<span class="bounce1"></span>
+								<span class="bounce2"></span>
+								<span class="bounce3"></span>
+							</div>
+						</div>
+						<div class="exists-message exists d-none">
+							<div class="alert alert-success off-limits-not-exists d-none">
+								Company <b class="exists-cname"></b> Already Exists In Your Database. <a
+									class="exists-link" href="" target="_blank"> View In Recruit CRM</a>
+							</div>
+							<div class="off-limits-text off-limits-exists d-none">
+								<div class="d-flex m-b-3">
+									<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 22.112 25.271" class="off-limits-icon m-t-3">
+										<path id="sTest-offLimitsIcon" d="M23.222,22.6,2.458,1.822,1.11,3.159,3.321,5.37a1.26,1.26,0,0,0-.221.684V16.847a8.4,8.4,0,0,0,15.763,4.064l3.022,3.022L23.222,22.6M5.732,12.635V7.781L6.785,8.834v3.8H5.732m4.738,0H9.418V11.467l1.053,1.053v.116m6.318.842-2.632-2.632V3.422a1.316,1.316,0,1,1,2.632,0V13.478m3.685,3.664L18.01,14.7l1.053-2.622a2.141,2.141,0,0,1,1.306-1.221l.832-.274a1.053,1.053,0,0,1,1.306,1.39l-2.032,5.17M9.418,6.107,6.785,3.475V2.9a1.316,1.316,0,0,1,2.632,0V6.107M13.1,9.793,10.471,7.16V1.316a1.316,1.316,0,0,1,2.632,0Z" transform="translate(-1.11)" fill="#1170CA"/>
+									</svg>
+									<span class="off-limits-label m-l-3"></span>
+								</div>
+								<span>
+									<span class="exists-cname font-weight-500"></span> already exists in your database, and is marked off-limits by <span class="off-limits-marked-by font-weight-500"></span> from <span class="off-limits-marked-from font-weight-500"></span> to <span class="off-limits-marked-to font-weight-500"></span>. 
+									<a class="exists-link off-limits-links" href="" target="_blank"> View In Recruit CRM</a>
+								</span>
+							</div>
+						</div>
+						<div class="exists-message not-exists d-none">Company <b class="exists-cname"></b> Does Not
+							Exist
+							In Recruit CRM</div>
+					</div>
+					<!-- Duplicate Check UI Ends Here -->
+
+					<div class="p-0">
+						<div class="p-t-10 p-l-20 p-r-20 white m-10 outer-border">
+							<div class="rcrm-media">
+								<div class="rcrm-media-left m-r-20">
+									<img class="cimage" id="company_logo" name="company_logo"
+										data-defaultrsrc="{{BASE_IMAGES_URL}}/company-avatar.png"
+										src="{{BASE_IMAGES_URL}}/company-avatar.png" alt=""
+										onerror="this.src='{{BASE_IMAGES_URL}}/company-avatar.png'">
+								</div>
+								<div class="rcrm-media-content w-100">
+									<div class="rcrm-form-ctrl">
+										<input type="text" class="rcrm-ctrl cname" id="company_companyname"
+											name="company_companyname" maxlength="150" placeholder="Company Name"
+											required>
+									</div>
+									<div class="rcrm-form-ctrl">
+										<input type="text" class="rcrm-ctrl website" id="company_website"
+											name="company_website" maxlength="200" placeholder="Website">
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">About Company</label>
+									<input type="text" class="rcrm-ctrl aboutcompany" id="company_aboutcompany"
+										name="company_aboutcompany" maxlength="2500" placeholder="About company..." />
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Full Address</label>
+									<input type="text" class="rcrm-ctrl clocation" id="company_fulladdress" style="margin-bottom: 8px;"
+										name="company_fulladdress" maxlength="500" placeholder="City, State, Country">
+								</div>
+							</div>
+							<div id="additionalDetailsHeaderForCompany" class="" style="margin-top: -15px;">
+										
+								<div class="dropDown" id="dropDownDataSectionForCompany" style="margin-top: 20px; "></div>
+	
+								<div class="multiselect" id="multiselectDataSectionForCompany"></div>
+	
+								<div class="date" id="dateSectionForCompany"></div>
+	
+								<div class="date" id="dateTimeSectionForCompany"></div>
+								
+								<div class="file" id="fileContainerForCompany"></div>
+	
+								<div class="textFields" id="textFieldsContainerForCompany"></div>
+	
+								<div class="longTextFields" id="longTextFieldsContainerForCompany"></div>
+	
+								<div class="summaryFields" id="summaryFieldsContainerForCompany"></div>
+	
+								<div class="industries" id="companyIndustries"></div>							
+								<div class="checkbox" id="checkboxSectionForCompany"></div>
+
+								<div id="companyContacts" class="d-none">
+									<div class="rcrm-form-ctrl m-b-10" id="companyContactsField">
+										<label class="rcrm-headings-label" id="companyExistingContactLabel">Select Existing Contacts</label>
+										<div class="selected-collaborator" id="companySelectedContacts">
+
+										</div>
+										<div class="custom-dropdown" id="companyContactsSearchField">
+											<input class="search-collaborator" id="companyContactsSearch" type="text" placeholder="Search Contacts By Name Or Email" autocomplete="off">
+											<div class="dropdown-content scrollable-alert" id="companyContactsDropdownOptions">
+												<!-- Options will be dynamically added here -->
+											</div>
+										</div>
+									</div>
+								</div>
+								
+								<br style="display: contents;">
+	
+							</div>
+						</div>
+					</div>
+					<div class="tab rcrm_tabs bottom-tabs p-0 white m-10 outer-border">
+						<a class="subtablinks active" id="company_details_link" style="height: 40px;" data-entity="company_details">Contact
+							Details</a>
+						<a class="subtablinks" id="company_notes_link" style="height: 40px;" data-entity="company_notes">Notes</a>
+					</div>
+					<div id="company_details" class="subtabcontent white m-10 outer-border">
+						<div class="p-t-10 p-l-20 p-r-20">
+							<div class="rcrm-media">
+								<div class="rcrm-media-left m-r-20">
+									<img class="image" id="company_contact_photo" name="company_contact_photo"
+										data-defaultrsrc="{{BASE_IMAGES_URL}}/avatar3.png"
+										src="{{BASE_IMAGES_URL}}/avatar3.png" alt=""
+										onerror="this.src='{{BASE_IMAGES_URL}}/avatar3.png'">
+								</div>
+								<div class="rcrm-media-content w-100">
+									<div class="rcrm-form-ctrl">
+										<input type="text" class="rcrm-ctrl fname" id="company_contact_firstname"
+											name="company_contact_firstname" maxlength="60"
+											placeholder="Contact First Name">
+										<input type="text" class="rcrm-ctrl lname" id="company_contact_lastname"
+											name="company_contact_lastname" maxlength="60"
+											placeholder="Contact Last Name">
+									</div>
+									<div class="rcrm-form-ctrl">
+										<input type="text" class="rcrm-ctrl position" id="company_contact_designation"
+											maxlength="100" name="company_contact_designation"
+											placeholder="Contact Title">
+									</div>
+								</div>
+							</div>
+
+							<!-- <div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Name</label>
+									<input type="text" class="rcrm-ctrl name" id="company_contact_name"
+										name="company_contact_name" maxlength="120" placeholder="Contact Name" required>
+								</div>
+							</div> -->
+
+							<!-- <div class="d-flex"> -->
+							<!-- <div class="rcrm-form-group m-r-5">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Title</label>
+										<input type="text" class="rcrm-ctrl position" id="company_contact_designation"
+											maxlength="100" name="company_contact_designation"
+											placeholder="Contact Title">
+									</div>
+								</div> -->
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Email</label>
+									<input type="email" class="rcrm-ctrl email" id="company_contact_email"
+										maxlength="100" name="company_contact_email" placeholder="Contact Email">
+								</div>
+							</div>
+							<!-- </div> -->
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Phone</label>
+									<input type="text" class="rcrm-ctrl phone" id="company_contact_contactnumber" style="margin-bottom: 8px;"
+										name="company_contact_contactnumber" maxlength="50" placeholder="Phone">
+								</div>
+							</div>
+
+							<div id="additionalDetailsHeaderForCompanyContact" class="" style="margin-top: -15px;">
+										
+								<div class="dropDown" id="dropDownDataSectionForCompanyContact" style="margin-top: 20px; "></div>
+
+								<div class="multiselect" id="multiselectDataSectionForCompanyContact"></div>
+
+								<div class="date" id="dateSectionForCompanyContact"></div>
+
+								<div class="date" id="dateTimeSectionForCompanyContact"></div>
+
+								<div class="file" id="fileContainerForCompanyContact"></div>
+
+								<div class="textFields" id="textFieldsContainerForCompanyContact"></div>
+
+								<div class="longTextFields" id="longTextFieldsContainerForCompanyContact"></div>
+
+								<div class="summaryFields" id="summaryFieldsContainerForCompanyContact"></div>
+
+								<div class="checkbox" id="checkboxSectionForCompanyContact"></div>
+
+
+								<br style="display: contents;">
+
+							</div>
+
+							<div id="additionalDetailsHeaderForCompanyEmpty" class="" style="display: none;">
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Custom Field 1</label>
+										<input type="text" class="rcrm-ctrl " disabled
+											id="" minlength="3" maxlength="40"
+											name="" placeholder="Custom Field Value 1">
+									</div>
+								</div>
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Custom Field 2</label>
+										<input type="text" class="rcrm-ctrl " disabled
+											id="" minlength="3" maxlength="40"
+											name="" placeholder="Custom Field Value 2">
+									</div>
+								</div>
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Custom Field 3</label>
+										<input type="text" class="rcrm-ctrl " disabled
+											id="" minlength="3" maxlength="40"
+											name="" placeholder="Custom Field Value 3">
+									</div>
+								</div>
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Custom Field 4</label>
+										<input type="text" class="rcrm-ctrl " disabled
+											id="" minlength="3" maxlength="40"
+											name="" placeholder="Custom Field Value 4">
+									</div>
+								</div>
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl">
+										<label class="rcrm-headings-label">Custom Field 5</label>
+										<input type="text" class="rcrm-ctrl " disabled
+											id="" minlength="3" maxlength="40"
+											name="" placeholder="Custom Field Value 5">
+									</div>
+								</div>
+
+							</div>
+						</div>
+						
+					</div>
+					<div id="company_notes" class="subtabcontent white m-10 outer-border">
+						<div class="p-t-10 p-l-20 p-r-20">
+							<div class="p-t-2 m-b-20">
+								<textarea placeholder="Start Typing..." cols="33" rows="6" id="company_notes"
+									name="extra_data_comp_notes" maxlength="10000"
+									class="rcrm-textarea-ctrl"></textarea>
+							</div>
+							<div class="company-notetype" id="company_note_notetype_followup">
+								<div>
+									<label class="rcrm-headings-label">Note Type</label>
+									<div class="selected-notetype" id="company_selected_notetype">
+										<p class="notetype-placeholder">Select Note Type</p>
+									</div>
+								</div>
+								<div class="notetype-dropdown" id="company_note_notetype">
+									<div class="notetype-search">
+										<i class="mdi mdi-magnify"></i>
+										<input class="notetype-input" id="company_notetype_search" type="text" placeholder="Search Note Type">
+									</div>
+									
+									<div class="notetype-option-container" id="company_notetype_dropdown_options">
+										<!-- Options will be dynamically added here -->
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-form-ctrl" id="company_notes_collaborators_followup">
+								<label class="rcrm-headings-label">Collaborators</label>
+								<div class="selected-collaborator" id="company_notes_selected_collaborator">
+
+								</div>
+								<div class="custom-dropdown" id="company_notes_collaborators">
+									<input class="search-collaborator" id="company_notes_search_collaborators" type="text" placeholder="Select Team Or Teammate">
+									<div class="dropdown-content scrollable-alert" id="company_notes_dropdown_options">
+										<!-- Options will be dynamically added here -->
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+
+					<div class="p-20" style="margin-top: 25px;">
+						<div class="rcrm-form-group rcrm-fixed-bottom" style="padding-bottom: 45px; border-top: 10px solid #00000010; background: white; width: 100%; margin-left: -20px;">
+							<div class="rcrm-form-group " style="margin-right: 10px; margin-left: 20px; margin-top: 5px;" id="save_candidate_company_parent">
+								<input type="checkbox" id="save_candidate_company" checked/>
+								<div class="d-none tooltip_templates">
+									<span id="save_candidate_tooltip_company">If checked, This person will be added as both
+										a candidate and contact in Recruit CRM.
+									</span>
+								</div>
+								<Label>Also save as a Candidate <span class="tooltip"
+										data-tooltip-content="#save_candidate_tooltip_company"><i
+											class="mdi mdi-information-outline"></i></span>
+								</Label>
+							</div>
+						</div>
+						<div class="d-flex p-t-10 rcrm-fixed-bottom">
+							<button type="submit" class="rcrm-success-button">Save Company</button>
+						</div>
+					</div>
+				</div>
+			</form>
+			<!--Company Tab End -->
+
+			<!--Setting Tab Start -->
+			<form id="settings_form" style="background-color: #00000010;">
+				<div id="settings" class="full-height-content tabcontent p-0">
+					<div class="m-0 w-100 existing-alert p-2" role="alert">
+						<ul class="settings-list-container m-t-5 existing-alert-list">
+							<p class="block-heading p-l-10" style="color: black;">
+								Turn features on / off
+							</p>
+							<li>
+								<ul class="settings-list m-t-5 existing-alert-list">
+									<li class="p-10 settings-list-item white m-10 outer-border">
+										<div class="d-flex justify-content-s-b">
+											<p style="color: black;">Click to parse <small>(For LinkedIn)</small></p>
+											<p>
+												<label class="switch">
+													<input type="checkbox" id="settings_ctp" checked>
+													<span class="slider round"></span>
+												</label>
+											</p>
+										</div>
+										<p class="d-flex flex-direction-col">
+										<div class="d-none tooltip_templates">
+											<span id="ctp_setting_tooltip">
+												When enabled and on LinkedIn, profile links will have a Recruit CRM icon
+												on top left
+												corner. Click on this icon to parse the profile in Recruit CRM sourcing
+												extension.
+												<a href="https://www.loom.com/share/640095f17f8247e1a990c96a8cfc44c5"
+													target="_blank">See how!</a>
+										</div>
+										<span class="setting-tooltip-span" data-tooltip-content="#ctp_setting_tooltip">
+											<i class="mdi mdi-information-outline">
+											</i>
+											Parse LinkedIn profiles in a click..without opening!
+										</span>
+										</p>
+									</li>
+
+									<li class="p-10 settings-list-item white m-10 outer-border">
+										<div class="d-flex justify-content-s-b">
+											<p style="color: black;">Upload PDF by default <small>(For LinkedIn)</small></p>
+											<p>
+												<label class="switch">
+													<input type="checkbox" id="settings_auto_pdf" checked>
+													<span class="slider round"></span>
+												</label>
+											</p>
+										</div>
+										<p class="d-flex flex-direction-col">
+										<div class="d-none tooltip_templates">
+											<span id="auto_pdf_setting_tooltip">
+												Even when turned off, you will be able to upload PDF just by checking
+												the checkbox below Resume/CV drag drop area.
+												Enabling the setting just checks the checkbox by default.
+											</span>
+										</div>
+										<span class="setting-tooltip-span"
+											data-tooltip-content="#auto_pdf_setting_tooltip">
+											<i class="mdi mdi-information-outline">
+											</i>
+											Upload profile PDF generated by LinkedIn directly to Recruit CRM files.
+										</span>
+										</p>
+									</li>
+
+									<!-- Override data -->
+									<li class="p-10 settings-list-item white m-10 outer-border">
+										<div class="d-flex justify-content-s-b">
+											<p style="color: black;">Override Data <small>(For LinkedIn)</small></p>
+											<p>
+												<label class="switch">
+													<input type="checkbox" id="settings_override_data" checked>
+													<span class="slider round"></span>
+												</label>
+											</p>
+										</div>
+										<p class="d-flex flex-direction-col">
+											<div class="d-none tooltip_templates">
+												<span id="override_data_setting_tooltip">
+													This setting allows you to override the existing data with the new one or just keep old data while checking duplicates in the extension and in the CRM. 
+													Please note that this setting does not apply to additional fields as those will always be overridden except for Current/Last Organization and Skills.
+													<a href="https://help.recruitcrm.io/en/articles/7436054-selecting-custom-fields-on-the-chrome-extension" target="_blank" class="details-link">Learn More</a>
+												</span>
+											</div>
+											<span class="setting-tooltip-span"
+												data-tooltip-content="#override_data_setting_tooltip">
+												<i class="mdi mdi-information-outline">
+												</i>
+												This will override the existing data with the new one.
+											</span>
+											<br>
+											<div class="d-none tooltip_templates">
+												<span id="override_data_setting_tooltip_1">
+													This setting will allow you to override the new Work and Education History by removing the existing ones.
+												</span>
+											</div>
+											<span class="setting-tooltip-span"
+												data-tooltip-content="#override_data_setting_tooltip_1">
+												<i class="mdi mdi-information-outline">
+												</i>
+												This Will Remove The Existing Work And Education History And Add The New Ones.
+											</span>
+											<br>
+											<div class="d-none tooltip_templates">
+												<span id="override_data_setting_tooltip_current_organisation">
+													A candidate's current organization will always update with the latest information, even if this option is turned
+													off.
+												</span>
+											</div>
+											<span class="setting-tooltip-span" data-tooltip-content="#override_data_setting_tooltip_current_organisation">
+												<i class="mdi mdi-information-outline">
+												</i>
+												Candidate's current organization will always be updated whenever new data is available, even if this toggle is
+												turned off.
+											</span>
+										</p>
+									</li>
+
+									<!-- Reorder section -->
+									<li class="p-10 settings-list-item white m-10 outer-border" id="reorderSectionsHeader">
+										<div class="d-flex justify-content-s-b">
+											<p style=" margin-bottom: 5px; color: black;">Reorder Sections</p>
+										</div>
+										<span class="setting-tooltip-span"
+											data-tooltip-content="">
+											<i class="mdi mdi-information-outline">
+											</i>
+											You need to refresh the page to reflect changes. 
+										</span>
+										<p class="d-flex flex-direction-col">
+											<ul style="padding: 5px;" id="reorderList"></ul>
+										</p>
+									</li>
+
+								</ul>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</form>
+			<!--Setting Tab End -->
+
+		</section>
+
+		<section class="ext-section submit-ext add-scrollbar">
+			<!-- Message Partials Candidates-->
+			<div class="rcrm-message-partial d-none m-t-25" id="rcrm-success-candidate-message">
+				<div class="rcrm-success-body">
+					<div class="sa">
+						<div class="sa-success">
+							<div class="sa-success-tip"></div>
+							<div class="sa-success-long"></div>
+							<div class="sa-success-placeholder"></div>
+							<div class="sa-success-fix"></div>
+						</div>
+					</div>
+					<!-- <img src="{{BASE_IMAGES_URL}}/success-check.svg" alt=""> -->
+					<h2>Success!</h2>
+					<h3 class="p-l-30 p-r-30 p-t-10 rcrm-text-center"><a href="" target="_blank"
+							class="details-link"><span class="success-name"></span></a>
+						<span id="rcrm-success-candidate-added-updated">Has Been Added To</span> Your Recruit CRM
+						Database
+					</h3>
+				</div>
+			</div>
+			<!-- Message Partials Candidates-->
+			<!-- Message Partials Contact-->
+			<div class="rcrm-message-partial d-none m-t-25" id="rcrm-success-contact-message">
+				<div class="rcrm-success-body">
+					<div class="sa">
+						<div class="sa-success">
+							<div class="sa-success-tip"></div>
+							<div class="sa-success-long"></div>
+							<div class="sa-success-placeholder"></div>
+							<div class="sa-success-fix"></div>
+						</div>
+					</div>
+					<!-- <img src="{{BASE_IMAGES_URL}}/success-check.svg" alt=""> -->
+					<h2>Success!</h2>
+					<h3 class="p-l-30 p-r-30 p-t-10 rcrm-text-center"><a href="" target="_blank"
+							class="details-link"><span class="success-name"></span></a>
+						<span id="rcrm-success-contact-added-updated">Has Been Added To</span> Your Recruit CRM Database
+					</h3>
+				</div>
+			</div>
+			<!-- Message Partials Contact-->
+			<!-- Message Partials Company-->
+			<div class="rcrm-message-partial d-none m-t-25" id="rcrm-success-company-message">
+				<div class="rcrm-success-body">
+					<div class="sa">
+						<div class="sa-success">
+							<div class="sa-success-tip"></div>
+							<div class="sa-success-long"></div>
+							<div class="sa-success-placeholder"></div>
+							<div class="sa-success-fix"></div>
+						</div>
+					</div>
+					<!-- <img src="{{BASE_IMAGES_URL}}/success-check.svg" alt=""> -->
+					<h2>Success!</h2>
+					<h3 class="p-l-30 p-r-30 p-t-10 rcrm-text-center"><a href="" target="_blank"
+							class="details-link"><span class="success-name"></span></a>
+						<span id="rcrm-success-company-added-updated">Has Been Added To</span> Your Recruit CRM Database
+					</h3>
+					<!-- <a class="m-t-10 m-b-10">View in Recruit CRM</a> -->
+				</div>
+			</div>
+			<!-- Message Partials Company-->
+
+			<!-- Action Grid on Candidate Save-->
+			<div class="rcrm-action-div-candidate">
+				<div class="rcrm-action-on-candidate">
+					<div class="rcrm-action-on-candidate-row-1 d-flex rcrm-center-align">
+						<div
+							class="d-none rcrm-grid rcrm-action-box rcrm-border-right-dashed w-50 d-flex flex-direction-col align-items-center assign-to-job-foolowup-link">
+							<!-- Add d-none to this class -->
+							<a class="p-15 d-flex align-items-center flex-direction-col justify-content-center assign_to_job_followup_link"
+								href="#assign_to_job_followup" rel="modal:open">
+								<div class="rcrm-btn-round rcrm-assign-job m-b-10">
+									<i class="mdi mdi-briefcase"></i>
+								</div>
+								<p>Assign To Job</p>
+							</a>
+						</div>
+						<div class="rcrm-grid rcrm-action-box w-50 d-flex flex-direction-col align-items-center">
+							<a href="#add_to_hot_list_followup" rel="modal:open" data-entity="candidate"
+								class="p-15 d-flex align-items-center flex-direction-col justify-content-center add_to_hot_list_followup_link">
+								<div class="rcrm-btn-round rcrm-add-to-hotlist m-b-10">
+									<i class="mdi mdi-fire"></i>
+								</div>
+								<p>Add To Hotlist</p>
+							</a>
+						</div>
+
+					</div>
+					<div class="rcrm-action-on-candidate-row-2 d-flex">
+						<div
+							class="rcrm-grid rcrm-action-box w-50 rcrm-border-right-dashed rcrm-border-top-dashed d-flex flex-direction-col align-items-center">
+							<a href="#add_appointment_followup" rel="modal:open" data-entity="candidate"
+								class="p-15 d-flex align-items-center flex-direction-col justify-content-center add_appointment_followup_link">
+								<div class="rcrm-btn-round rcrm-add-appointment m-b-10">
+									<i class="mdi mdi-calendar icon-appointment"></i>
+								</div>
+								<p>Add Appointment</p>
+							</a>
+						</div>
+						<div
+							class="rcrm-grid rcrm-action-box w-50 rcrm-border-top-dashed d-flex flex-direction-col align-items-center">
+							<a href="#add_task_followup" rel="modal:open" data-entity="candidate"
+								class="p-15 d-flex align-items-center flex-direction-col justify-content-center add_task_followup_link">
+								<div class="rcrm-btn-round rcrm-add-task m-b-10">
+									<i class="mdi mdi-check-all"></i>
+								</div>
+								<p>Add Task</p>
+							</a>
+						</div>
+					</div>
+				</div>
+
+                <div id="containerCandidateSavedNote" style="display: none;">
+                    <div id="candidateSavedNote" class="email-phone-note-details">
+                        <p class="new-contact-details">New contact details found on LinkedIn</p>
+                        <p class="new-email-details" id="updatedCandidateEmail">test@abc.com</p>
+                        <p class="new-email-details" id="updatedCandidatePhone">+91 989119121212</p>
+                        <div style="margin-top: 15px;">
+                            <a style="cursor: pointer;" class="update-contact-details" id="updateContactDetailsAfterSave">Update Contact Details</a>
+                        </div>
+                    </div>
+                    <p class="note-added">Note: We have already added the new contact details as a note to this candidate.</p>
+                </div>
+
+			</div>
+			<!-- Action Grid on Candidate Save-->
+
+			<div class="btn-block-done m-t-10">
+				<a class="submit-screen-ok rcrm-success-button-sm">Done</a>
+			</div>
+		</section>
+		<!-- Main Content -->
+		<!-- Assign To Job -->
+		<section id="assign_to_job_followup" class="ext-section submit-actions-ext p-10">
+			<div class="rcrm-form-icon-job">
+				<i class="mdi mdi-briefcase rcrm-header-icon"></i>
+			</div>
+			<div class="rcrm-form-headings p-t-5">
+				<div class="rcrm-success-body">
+					<div class="assign_to_job_followup_presigned scrollable-alert m-0 w-100 d-none existing-alert p-2"
+						role="alert">
+						<p>
+							<a href="" target="_blank" class="details-link p-l-3 p-r-3">
+								<span class="success-name"></span>
+							</a> is assigned to
+						</p>
+						<ul class="presigned-jobs-list m-t-5 existing-alert-list">
+							<!-- <li><a>QA Manager</a></li> -->
+						</ul>
+					</div>
+					<h3 class="rcrm-header d-none assign_to_job_followup_preigned_empty">
+						Assign<a href="" target="_blank" class="details-link p-l-3 p-r-3">
+							<span class="success-name"></span>
+						</a> To Job
+					</h3>
+				</div>
+			</div>
+
+			<div class="m-t-50 m-b-10" id="assign_to_job_select_container">
+				<select class="rcrm-select2" name="tags[]" data-placeholder="Select And Assign To Jobs"
+					id="assign_to_job_select" multiple="multiple" data-parent="#assign_to_job_select_container"
+					data-formatSearchResult="true" data-searchIcon="business_center" data-minimum-searchchars="0"
+					data-url="{{BASE_API_URL}}/extensions/chrome/search-entity" data-ajax="true"
+					data-ajaxdata='{ "candidates": false,"contacts": false, "compnaies": false, "jobs": true, "users": false }'
+					required>
+				</select>
+
+				<!-- <select class="rcrm-select2 rcrm-ctrl" data-url="{{BASE_API_URL}}/extensions/chrome/search-entity"
+					data-parent="#assign_to_job_select_container" data-ajax="true"
+					data-ajaxdata='{"candidates": false,"contacts": false, "compnaies": false, "jobs": true, "users": false }'
+					data-placeholder="Search and Select Job To Assign" id="assign_to_job_select" name="tags[]"
+					data-formatSearchResult="false" data-valueParam="id" multiple="multiple" required>
+				</select> -->
+
+			</div>
+			<div class="rcrm-form-group" id="send_email_trigger_checkbox_div" style="display: none;">
+				<div class="rcrm-form-ctrl">
+					<label for="add_new_hotlist_shared">
+						<input type="checkbox" name="emailTrigger" id="send_email_trigger_checkbox"
+							class="v-align-middle" style="vertical-align: middle;">
+						<span id="send_email_trigger_checkbox_label" style="vertical-align: middle;">Send Email
+							Trigger</span>
+					</label>
+				</div>
+			</div>
+			<div class="d-flex">
+				<button type="submit" id="btn_assign_to_job" class="rcrm-success-button m-t-15 m-b-15 m-l-15">Assign
+				</button>
+			</div>
+			<div class="d-flex">	
+			<p>Note : Jobs in the list that are already assigned are disabled!</p>
+			</div>
+		</section>
+		<!-- Assign To Job -->
+
+		<!-- Change Hiring Stage  -->
+		<div class="d-none tooltip_templates" id="h_s_tooltip_template">
+
+		</div>
+		<!-- Change Hiring Stage  -->
+		<div class="d-none tooltip_templates_shadow" id="h_s_tooltip_template_shadow">
+			<section data-role="shadow" data-id="update_hiring_stage_tooltip">
+				<button class="h-p-close">X</button>
+				<form data-role="shadow" data-id="update_hiring_stage_from">
+					<h3>Update Hiring Stage</h3>
+					<br>
+					<div class="rcrm-form-group">
+						<div class="rcrm-form-ctrl">
+							<label class="rcrm-headings-label">Stage Date</label>
+							<input type='text' data-role="shadow" data-id="stagedate" name="stagedate"
+								class="rcrm-ctrl datepicker-here rcrm-datepicker" data-language="en" readonly />
+						</div>
+					</div>
+					<div class="rcrm-form-group">
+						<div class="rcrm-form-ctrl">
+							<label class="rcrm-headings-label">Remark</label>
+							<textarea name="remark" maxlength="3000" placeholder="type your remarks here.." id="remark"
+								cols="33" rows="5" data-role="shadow" data-id="remark"
+								class="rcrm-textarea-ctrl"></textarea>
+							<span style="float: right;margin-top: 0.5rem"><span id="remarksLendth">0</span> /
+								3000</span>
+							<div style="clear: both;"></div>
+						</div>
+					</div>
+					<div class="rcrm-form-group">
+						<div class="rcrm-form-ctrl">
+							<div class="" data-role="shadow" data-id="update_hiring_stage_select_container">
+								<label>Select stage</label>
+								<select name="candidatestatusid" class="full-width" data-role="shadow"
+									id="candidatestatusid" data-id="candidatestatusid" required>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="rcrm-form-group" id="trigger_hiring_update_email_div">
+						<div class="rcrm-form-ctrl">
+							<label for="trigger_hiring_update_email">
+								<input type="checkbox" id="trigger_hiring_update_email" class="v-align-middle"
+									style="vertical-align: middle;">
+								<span id="trigger_hiring_update_email_label" style="vertical-align: middle;">Send
+									Email</span>
+							</label>
+						</div>
+					</div>
+					<!-- <div class="rcrm-form-group">
+						<div class="rcrm-form-ctrl">
+							<label for="trigger_hiring_update_email">
+								Send assigned attachment email
+								<input type="checkbox" name="trigger_hiring_update_email" data-role="shadow" data-id="trigger_hiring_update_email" class="v-align-middle" checked> 
+							</label>
+						</div>
+					</div> -->
+
+					<div class="d-flex">
+						<button type="submit" data-role="shadow" data-id="btn_update_hiring_stage"
+							class="rcrm-success-button m-t-15 m-b-15 m-l-15">Change Stage
+						</button>
+					</div>
+				</form>
+			</section>
+		</div>
+		<!-- Change Hiring Stage  -->
+
+
+		<!-- Assign To HotList -->
+		<section id="add_to_hot_list_followup" class="ext-section submit-actions-ext">
+			<div class="rcrm-form-icon-hotlist">
+				<i class="mdi mdi-fire rcrm-header-icon"></i>
+			</div>
+			<div class="rcrm-form-headings p-t-5">
+				<div class="add_to_hot_list_followup_head rcrm-text-center m-t-10 m-b-20 d-none">
+					<h3 class="rcrm-header">Add to Hotlist</h3>
+				</div>
+				<div class="rcrm-success-body">
+					<div class="add_to_hot_list_followup_presigned alert alert-primary scrollable-alert m-0 w-100 d-none existing-alert"
+						role="alert">
+						<p>
+							<a target="_blank" class="details-link p-l-3 p-r-3">
+								<span class="success-name"></span>
+							</a> exists in
+						</p>
+						<ul class="presigned-hotlists-list m-l-20 m-t-5 existing-alert-list">
+							<!-- <li><a>QA Manager</a></li> -->
+						</ul>
+					</div>
+					<h3 class="rcrm-header d-none add_to_hot_list_followup_preigned_empty">
+						Add <a href="" target="_blank" class="details-link p-l-3 p-r-3">
+							<span class="success-name"></span>
+						</a> To Hotlist
+					</h3>
+				</div>
+			</div>
+			<div class="m-t-15 m-b-10" id="add_to_hot_list_select_container">
+				<div class="rcrm-form-group">
+					<div class="rcrm-form-ctrl">
+						<label class="rcrm-headings-label" for="add_to_hot_list_select">Add To Existing Hotlist</label>
+						<select class="rcrm-select2" id="add_to_hot_list_select"
+							data-parent="#add_to_hot_list_select_container" data-placeholder="Select Hotlist"
+							name="tags[]" data-minimum-searchchars="0" data-valueParam="id"
+							data-formatSearchResult="false">
+							<option></option>
+						</select>
+					</div>
+				</div>
+
+				<div id="add_to_hot_list_followup_or_div"
+					style="width: 3rem;height: 3rem;border-radius: 50%;border: 2px solid #777;display: flex;justify-content: center;align-items: center;background-color: #f1f1f1;color: #555;margin: auto;">
+					Or
+				</div>
+
+				<div id="add_to_hot_list_followup_new_hotlist_div" class="m-t-10 rcrm-form-group">
+					<dib class="rcrm-form-ctrl">
+						<label class="rcrm-headings-label" for="add_new_hotlist">Create new Hotlist</label>
+						<input type="text" class="rcrm-ctrl" id="add_new_hotlist" name="add_new_hotlist"
+							placeholder="New Hotlist Name" minlength="3" maxlength="100">
+				</div>
+			</div>
+			<div class="m-t-10 rcrm-form-group">
+				<div class="rcrm-form-ctrl">
+					<label for="add_new_hotlist_shared">
+						<input type="checkbox" name="shared" id="add_new_hotlist_shared" class="v-align-middle"> Share
+						Hotlist With Team
+					</label>
+				</div>
+			</div>
+			</div>
+			<div class="d-flex hotlist-submit-container">
+				<button type="submit" id="btn_add_to_hot_list" class="rcrm-success-button m-15">Add</button>
+			</div>
+		</section>
+		<!-- Assign To HotList -->
+
+		<!-- Add Apointment -->
+		<section id="add_appointment_followup" class="ext-section submit-actions-ext p-10">
+			<div class="rcrm-form-icon">
+				<i class="mdi mdi-calendar rcrm-header-icon icon-appointment"></i>
+			</div>
+			<form id="appointment_form">
+				<div class="full-height-content p-t-25">
+					<div class="p-0">
+						<div class="p-t-15 p-l-10 p-r-10">
+							<div class="rcrm-text-center m-b-20">
+								<h3 class="rcrm-header">Add Appointment</h3>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Title</label>
+									<input type="text" class="rcrm-ctrl" id="appointment_title" name="appointment_title"
+										placeholder="Staff Meeting & Review To Discuss Issue" minlength="3"
+										maxlength="100" required>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl" id="appointment_ownerid_followup">
+									<label class="rcrm-headings-label">Owner</label>
+									<select class="rcrm-select2 rcrm-ctrl"
+										data-url="{{BASE_API_URL}}/extensions/chrome/search-entity"
+										data-parent="#appointment_ownerid_followup" data-ajax="true" data-valueParam="id"
+										data-ajaxdata='{ "candidates": false,"contacts": false, "compnaies": false, "jobs": false, "users": true }'
+										data-placeholder="Owner" id="appointment_ownerid" name="appointment_ownerid" data-init="owner"
+										data-selectkey="appointment_ownerid" data-selectObject="false" required>
+									</select>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Where</label>
+									<div id="googleMeetSection">
+										<button type="button" id="add_g_meet" class="m-t-2 g-meet-button">
+											<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+											Add Google Meet Link
+										</button>
+										<button type="button" id="connect_g_meet" class="m-t-2 g-meet-button">
+											<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+											Connect Google Meet
+										</button>
+										<div id="join_g_meet" class="d-flex m-t-2 m-b-2">
+											<button type="button" id="join_g_meet_btn" class="g-meet-button">
+												<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+												Join Google Meet Meeting
+											</button>
+											<button type="button" id="copy_g_meet_link"
+												class="mdi mdi-content-copy action-botton m-l-5">
+											</button>
+											<button type="button" id="delete_gmeet_link"
+												class="mdi mdi-delete-forever action-botton m-l-5">
+											</button>
+										</div>
+										<p id="gmeet_expired" class="color-red">
+											Your Google Meet integration token has expired. Please reconnect
+										</p>
+									</div>
+									<div id="teamMeetSection">
+										<div id="join_gmeet" class="d-flex m-t-2 m-b-2">
+											<button type="button" id="join_gmeet_btn" class="g-meet-button">
+												<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+												Join Google Meet Meeting
+											</button>
+											<button type="button" id="copy_gmeet_link"
+												class="mdi mdi-content-copy action-botton brr-0 blr-0">
+											</button>
+											<button type="button" id="delete_g_meet_link"
+												class="mdi mdi-delete-forever action-botton blr-0">
+											</button>
+										</div>
+										<div id="join_team_meet" class="d-flex m-t-2 m-b-2">
+											<button type="button" id="join_team_meet_btn" class="g-meet-button tooltip">
+												<img src="{{BASE_IMAGES_URL}}/team-meet.svg" alt="" class="g-meet-icon m-r-5">
+												Join Microsoft Teams Meet...
+											</button>
+											<button type="button" id="copy_team_link"
+												class="mdi mdi-content-copy action-botton brr-0 blr-0">
+											</button>
+											<button type="button" id="delete_mteam_link"
+												class="mdi mdi-delete-forever action-botton blr-0">
+											</button>
+										</div>
+										<div id="join_zoom_meet" class="d-flex m-t-2 m-b-2">
+											<button type="button" id="join_zoom_meet_btn" class="g-meet-button tooltip">
+												<img src="{{BASE_IMAGES_URL}}/zoom-meet.svg" alt="" class="g-meet-icon m-r-5">
+												Join Zoom Meeting
+											</button>
+											<button type="button" id="copy_zoom_link"
+												class="mdi mdi-content-copy action-botton brr-0 blr-0">
+											</button>
+											<button type="button" id="delete_zoom_link"
+												class="mdi mdi-delete-forever action-botton blr-0">
+											</button>
+										</div>
+										<div class="custom-dropdown" id="choose-team-meet">
+											<div class="d-flex" id="choose-meeting-dropdown">
+												<button type="button" id="choose_meet" class="m-t-2  choose-meet-button brr-0 w-197">
+													Choose Meeting link
+												</button>
+												<button type="button" id="add_gmeet_btn" class="m-t-2  choose-meet-button brr-0 w-197">
+													<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Add Google Meet Link
+												</button>
+												<button type="button" id="add_team_btn" class="m-t-2  choose-meet-button brr-0 w-197">
+													<img src="{{BASE_IMAGES_URL}}/team-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Add Microsoft Teams Link
+												</button>
+												<button type="button" id="add_zoom_btn" class="m-t-2  choose-meet-button brr-0 w-197">
+													<img src="{{BASE_IMAGES_URL}}/zoom-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Add Zoom Meet Link
+												</button>
+												<button type="button" id="choose-meet-menu-down" class="m-t-2 f-s-15 mdi mdi-menu-down choose-meet-button blr-0 w-10">
+												</button>
+												<button type="button" id="choose-meet-menu-up" class="m-t-2 f-s-15 mdi mdi-menu-up choose-meet-button blr-0 w-10">
+												</button>	
+											</div>
+											<p id="g_meet_expired" class="color-red">
+												Your Google Meet integration token has expired. Please reconnect
+											</p>
+											<div class="w-224 dropdown-content scrollable-alert" id="meeting_types_dropdown">
+												<button type="button" id="add_gmeet" class="custom-opt m-t-2 g-meet-button border-none">
+													<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Add Google Meet Link
+												</button>
+												<button type="button" id="connect_gmeet" class="custom-opt m-t-2 g-meet-button border-none">
+													<img src="{{BASE_IMAGES_URL}}/g-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Connect Google Meet
+												</button>
+												<button type="button" id="add_team_meet" class="custom-opt m-t-2 g-meet-button border-none">
+													<img src="{{BASE_IMAGES_URL}}/team-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Add Microsoft Teams Link
+												</button>
+												<button type="button" id="connect_team_meet" class="custom-opt m-t-2 g-meet-button border-none">
+													<img src="{{BASE_IMAGES_URL}}/team-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Connect Microsoft Teams
+												</button>
+												<button type="button" id="add_zoom_meet" class="custom-opt m-t-2 g-meet-button border-none">
+													<img src="{{BASE_IMAGES_URL}}/zoom-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Add Zoom Meet Link
+												</button>
+												<button type="button" id="connect_zoom_meet" class="custom-opt m-t-2 g-meet-button border-none">
+													<img src="{{BASE_IMAGES_URL}}/zoom-meet.svg" alt="" class="g-meet-icon m-r-5">
+													Connect Zoom Meet
+												</button>
+											</div>
+										</div>
+									</div>
+
+									<input type="text" class="rcrm-ctrl" name="appointment_address"
+										id="appointment_address" placeholder="35, WF Park, New York">
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl" id="appointment_realtedto_followup">
+									<label class="rcrm-headings-label">Related To</label>
+									<select class="rcrm-select2 rcrm-ctrl"
+										data-url="{{BASE_API_URL}}/extensions/chrome/search-entity"
+										data-parent="#appointment_realtedto_followup" data-ajax="true"
+										data-ajaxdata='{ "candidates": true,"contacts": true, "compnaies": true, "jobs": false, "users": false }'
+										data-placeholder="Related to Company/Contact/Candidate"
+										id="appointment_relatedto" name="appointment_relatedto" data-init="self"
+										data-selectkey="appointment_relatedto">
+									</select>
+									<!-- Self is the added entity -->
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl ctrl-with-icon">
+									<label class="rcrm-headings-label">Started On</label>
+									<i class="mdi mdi-calendar"></i>
+									<input type='text' id="appointment_startdate" name="appointment_startdate"
+										class="rcrm-ctrl datepicker-here rcrm-datepicker" data-language="en" readonly />
+								</div>
+							</div>
+							<div class="d-flex apointment-start-end-time">
+								<div class="rcrm-form-group">
+									<div class="rcrm-form-ctrl ctrl-with-icon">
+										<label class="rcrm-headings-label">Start Time</label>
+										<i class="mdi mdi-clock rcrm-fs-14"></i>
+										<select name="appointment_starttime" id="appointment_starttime"
+											class="rcrm-ctrl rcrm-native-select time-dropdown">
+											<!-- Options will be generated dynamically -->
+										</select>
+									</div>
+								</div>
+								<div class="rcrm-form-group m-l-25">
+									<div class="rcrm-form-ctrl ">
+										<label class="rcrm-headings-label">End Time</label>
+										<select name="appointment_endtime" id="appointment_endtime"
+											class="rcrm-ctrl rcrm-native-select time-dropdown">
+											<!-- Options will be generated dynamically -->
+										</select>
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl ctrl-with-icon">
+									<label class="rcrm-headings-label">Reminder</label>
+									<i class="mdi mdi-calendar-clock"></i>
+									<select placeholder="30 Mins Before" id="appointment_reminderdate"
+										name="appointment_reminderdate" class="rcrm-ctrl rcrm-native-select">
+										<option value="0">0 Min Before</option>
+										<option value="900">15 Min Before</option>
+										<option value="1800" selected>30 Min Before</option>
+										<option value="3600">1 Hour Before</option>
+										<option value="86400">1 Day Before</option>
+										<!---->
+									</select>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl" id="appointment_attendees_followup">
+									<label class="rcrm-headings-label">Attendees</label>
+									<select class="rcrm-select2 rcrm-ctrl" id="appointment_attendees"
+										data-url="{{BASE_API_URL}}/extensions/chrome/search-entity"
+										data-parent="#appointment_attendees_followup" data-ajax="true"
+										data-ajaxdata='{ "candidates": true,"contacts": true, "compnaies": false, "jobs": false, "users": true }'
+										data-placeholder="Candidates, Contacts and Users" name="appointment_attendees"
+										multiple="multiple" data-closeOnSelect=true data-init="self"
+										data-selectkey="appointment_attendees">
+									</select>
+								</div>
+							</div>
+							<div class="meetingtype" id="meeting_type_id">
+								<div>
+									<label class="rcrm-headings-label">Meeting Type</label>
+									<div class="selected-meetingtype" id="selected_meeting_type">
+										<p class="meetingtype-placeholder">Select Meeting Type</p>
+									</div>
+								</div>
+								<div class="meetingtype-dropdown" id="meeting_type">
+									<div class="meetingtype-search">
+										<i class="mdi mdi-magnify"></i>
+										<input class="meetingtype-input" id="meetingtype_search" type="text" placeholder="Search Meeting Type">
+									</div>
+
+									<div class="meetingtype-option-container" id="meeting_type_dropdown_options">
+										<!-- Options will be dynamically added here -->
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-form-ctrl" id="meeting_collaborators_followup">
+								<label class="rcrm-headings-label">Collaborators</label>
+								<div class="selected-collaborator" id="meeting_selected_collaborator">
+
+								</div>
+								<div class="custom-dropdown" id="meeting_collaborators">
+									<input class="search-collaborator" id="meeting_search_collaborators" type="text" placeholder="Select Team Or Teammate">
+									<div class="dropdown-content scrollable-alert" id="meeting_dropdown_options">
+										<!-- Options will be dynamically added here -->
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-appointment-description p-b-10">
+								<label class="rcrm-headings-label">Description</label>
+								<div class="p-t-10">
+									<div class="p-t-2">
+										<textarea placeholder="Start Typing..." cols="33" rows="5"
+											name="appointment_description" id="appointment_description" maxlength="5000"
+											class="rcrm-textarea-ctrl"></textarea>
+									</div>
+								</div>
+							</div>
+							
+							<div id="NoCalInvites" class="rcrm-form-group">
+                                <div  class="rcrm-form-ctrl">
+                                        <input type="checkbox" id="appointment_no_cal_invites" name="appointment_no_cal_invites" class="rcrm-appointment-input"/>
+                                        <div class="d-none tooltip_templates">
+                                            <span id="no_cal_invites_tooltip">If the checkbox is checked, it will not send email notification & calendar invites to the entities in Attendees & Related to section
+                                            </span>
+                                        </div>
+                                        <Label class="p-5">Do not send calendar invites
+											<span class="tooltip" data-tooltip-content="#no_cal_invites_tooltip">
+                                            	<i class="mdi mdi-information-outline"></i>
+											</span>
+                                        </Label>
+                                </div>
+                            </div>
+							<div class="full-width add-task-appointment-button p-b-10 p-t-10">
+								<button type="submit" class="rcrm-success-button">Add</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</form>
+		</section>
+		<!-- Add Apointment -->
+
+		<!-- Add Task -->
+		<section class="ext-section submit-actions-ext p-10" id="add_task_followup">
+			<div class="rcrm-form-icon">
+				<i class="mdi mdi-check-all rcrm-header-icon"></i>
+			</div>
+			<form id="task_form">
+				<div class="full-height-content p-t-25">
+					<div class="p-0">
+						<div class="p-t-15 p-l-10 p-r-10">
+							<div class="rcrm-text-center m-b-20">
+								<h3 class="rcrm-header">Add Task</h3>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl">
+									<label class="rcrm-headings-label">Title</label>
+									<input type="text" class="rcrm-ctrl" id="task_title" name="task_title"
+										placeholder="Staff Meeting & Review To Discuss Issue" minlength="3"
+										maxlength="100" required>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl" id="task_ownerid_followup">
+									<label class="rcrm-headings-label">Owner</label>
+									<select class="rcrm-select2 rcrm-ctrl"
+										data-url="{{BASE_API_URL}}/extensions/chrome/search-entity"
+										data-parent="#task_ownerid_followup" data-ajax="true" data-valueParam="id"
+										data-ajaxdata='{ "candidates": false,"contacts": false, "compnaies": false, "jobs": false, "users": true }'
+										data-placeholder="Owner" id="task_ownerid" name="task_ownerid" data-init="owner"
+										data-selectkey="task_ownerid" data-selectObject="false" required>
+									</select>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl" id="task_realtedto_followup">
+									<label class="rcrm-headings-label">Related To</label>
+									<select class="rcrm-select2 rcrm-ctrl"
+										data-url="{{BASE_API_URL}}/extensions/chrome/search-entity"
+										data-parent="#task_realtedto_followup" data-ajax="true"
+										data-ajaxdata='{ "candidates": true,"contacts": true, "compnaies": true, "jobs": false, "users": false }'
+										data-placeholder="Related to Company/Contact/Candidate" id="task_relatedto"
+										data-init="self" name="task_relatedto" data-selectkey="task_relatedto">
+									</select>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl ctrl-with-icon">
+									<label class="rcrm-headings-label">Reminder</label>
+									<i class="mdi mdi-calendar-clock"></i>
+									<select placeholder="30 Mins Before" id="task_reminderdate" name="task_reminderdate"
+										class="rcrm-ctrl rcrm-native-select">
+										<option value="0">0 Min Before</option>
+										<option value="900">15 Min Before</option>
+										<option value="1800" selected>30 Min Before</option>
+										<option value="3600">1 Hour Before</option>
+										<option value="86400">1 Day Before</option>
+										<!---->
+									</select>
+								</div>
+							</div>
+							<div class="tasktype" id="task_type_id">
+								<div>
+									<label class="rcrm-headings-label">Task Type</label>
+									<div class="selected-tasktype" id="selected_task_type">
+										<p class="tasktype-placeholder">Select Task Type</p>
+									</div>
+								</div>
+								<div class="tasktype-dropdown" id="task_type">
+									<div class="tasktype-search">
+										<i class="mdi mdi-magnify"></i>
+										<input class="tasktype-input" id="tasktype_search" type="text" placeholder="Search Task Type">
+									</div>
+
+									<div class="notetype-option-container" id="task_type_dropdown_options">
+										<!-- Options will be dynamically added here -->
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl ctrl-with-icon">
+									<label class="rcrm-headings-label">Starting</label>
+									<div class="d-flex">
+										<div class="w-50">
+											<i class="mdi mdi-calendar"></i>
+											<input type='text' id="taskt_startdate" name="task_startdate"
+												class="rcrm-ctrl datepicker-here rcrm-datepicker" data-language="en"
+												readonly />
+										</div>
+										<div class="w-50">
+											<i class="mdi mdi-clock rcrm-fs-14"></i>
+											<select name="task_starttime" id="task_starttime"
+												class="rcrm-ctrl rcrm-native-select time-dropdown">
+												<!-- Options will be generated dynamically -->
+											</select>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="rcrm-form-group">
+								<div class="rcrm-form-ctrl" id="task_collaborators_followup">
+									<label class="rcrm-headings-label">Collaborators</label>
+									<div class="selected-collaborator" id="task_selected_collaborator">
+	
+									</div>
+									<div class="custom-dropdown" id="task_collaborators">
+										<input class="search-collaborator" id="task_search_collaborators" type="text" placeholder="Select Team Or Teammate">
+										<div class="dropdown-content scrollable-alert" id="task_dropdown_options">
+											<!-- Options will be dynamically added here -->
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="rcrm-task-description">
+								<label class="rcrm-headings-label">Description</label>
+								<div class="p-t-10">
+									<div class="p-t-2">
+										<textarea placeholder="Start Typing..." cols="33" rows="5" id="task_description"
+											name="task_description" maxlength="1000"
+											class="rcrm-textarea-ctrl"></textarea>
+									</div>
+								</div>
+							</div>
+							<div class="full-width add-task-appointment-button p-b-10 p-t-10">
+								<button type="submit" class="rcrm-success-button">Add</button>
+							</div>
+						</div>
+
+
+					</div>
+
+				</div>
+			</form>
+		</section>
+		<!-- Add Task -->
+
+		<!-- Notes List -->
+		<section id="notes_list" class="ext-section submit-actions-ext p-10">
+			<div class="rcrm-form-icon-note">
+				<i class="mdi mdi-file rcrm-header-icon"></i>
+			</div>
+			<div class="rcrm-form-headings p-t-5">
+				<div class="rcrm-success-body">
+					<h3>Notes</h3>
+					<div class="d-none" id="note_empty_state_img">
+						<br>
+						<img src='{{BASE_IMAGES_URL}}/empty-state-notes.svg' style="width: 10rem" />
+						<br>
+					</div>
+					<div class="scrollable-alert m-0 w-100 existing-alert p-2 notes-list-container" role="alert">
+						<ul id="notes-list" class="notes-list m-t-5 existing-alert-list">
+							<li class="note-li-shadow d-none">
+								<div class="card activity-card">
+									<div class="card-body p-7">
+										<div class="activity-title d-none">
+											<div class="d-flex align-items-center">
+												<!-- <p class="color-note d-flex align-items-center">
+													<span class="activity-icon color-note bg-note">
+														<i class="mdi mdi-note"></i> 
+													</span>
+													<span class="m-l-5">Note</span>
+												</p> -->
+											</div>
+										</div>
+										<div class="activity-content">
+											<div class="note-activity-inline-edit">
+												<p class="note-contents"
+													style="white-space: pre-wrap;text-transform: none;"></p>
+											</div>
+
+										</div>
+										<div class="activity-notetype">
+											<p class="note-type"></p>										
+										</div>
+										<div class="activity-footer">
+											<p>
+												<i class="mdi mdi-account"></i>
+												<span class="font-weight-bold note-created-by m-l-5"></span>
+											</p>
+											<p>
+												<i class="mdi mdi-calendar-clock"></i>
+												<span class="font-weight-bold note-created-on m-l-5"></span>
+											</p>
+										</div>
+									</div>
+								</div>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+			<!-- <div class="d-flex">
+				<button type="submit" id="btn_assign_to_job"
+					class="rcrm-success-button m-t-15 m-b-15 m-l-15">Add note </button>
+			</div> -->
+		</section>
+		<!-- Notes list -->
+
+		<!-- Alert for Sales Navigator -->
+		<div>
+			<div id="click-alert-modal" class="modal-window">
+				<!-- <a href="#" title="Close" class="modal-close">Close</a> -->
+				<h3>Alert</h3>
+				<div class="m-b-20">Sales Navigator needs you to click one more time to scan</div>
+				<button class="close-click-alert button full-width rcrm-success-button">Click</button>
+			</div>
+		</div>
+	</section>
+</body>
+
+</html>

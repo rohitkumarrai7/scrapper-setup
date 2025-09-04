@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recruit CRM – Scraper</title>
+  <link href="../assets/css/app.css" rel="stylesheet" />
+  <style>
+    body { width: 360px; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    header { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #eee; }
+    header img { width:20px; height:20px; }
+    .wrap { padding: 12px; }
+    .status { font-size: 12px; color:#666; margin-bottom:8px; }
+    .error { color:#b00020; }
+    .ok { color:#0a7b34; }
+    button { background:#1976d2; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .row { margin: 8px 0; }
+    .label { font-size:11px; color:#777; }
+    .value { font-weight:600; }
+    .hint { font-size:12px; color:#999; margin-top:6px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .container { padding: 12px; }
+    .summary { margin-bottom: 12px; }
+    .section { margin-bottom: 12px; }
+    .small { font-size: 11px; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="../assets/images/logo-32.png" alt="logo" />
+    <div>Recruit CRM – LinkedIn Scraper</div>
+  </header>
+  <div class="container">
+    <h2>Recruit CRM – LinkedIn Scraper</h2>
+    <div id="status" class="status">Initializing…</div>
+    <div id="error" class="error" style="display:none"></div>
+    <button id="scrapeBtn" class="btn">Scrape Profile</button>
+
+    <hr/>
+    <div class="summary">
+      <div><strong>Name:</strong> <span id="scraped-name">—</span></div>
+      <div><strong>Title:</strong> <span id="scraped-headline">—</span></div>
+      <div><strong>LinkedIn URL:</strong> <a id="field-url" href="#" target="_blank">—</a></div>
+      <div><strong>Contact:</strong> <span id="field-contact">—</span></div>
+      <div><strong>Top Skills:</strong> <span id="field-top-skills">—</span></div>
+    </div>
+
+    <div class="section">
+      <h3>About Summary</h3>
+      <div id="field-about" class="mono small">—</div>
+    </div>
+
+    <div class="section">
+      <h3>Experience</h3>
+      <ul id="list-experience" class="mono small"></ul>
+    </div>
+
+    <div class="section">
+      <h3>Education</h3>
+      <ul id="list-education" class="mono small"></ul>
+    </div>
+
+    <div class="section">
+      <h3>Certifications</h3>
+      <ul id="list-certifications" class="mono small"></ul>
+    </div>
+
+    <div id="rawWrap" class="section">
+      <h3>Raw payload</h3>
+      <pre id="raw" class="mono small"></pre>
+    </div>
+  </div>
+
+  <script src="../assets/js/popup-ui.js"></script>
+</body>
+</html>

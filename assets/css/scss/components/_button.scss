@@ -1,0 +1,200 @@
+.button
+{
+    background-color: #15dc80;
+    border: none;
+    color: white;
+    padding: 2px 30px;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 15px;
+    cursor: pointer;
+    height: 40px;
+    border-radius: 0px;
+    position: relative;
+    transition: all .15s ease;
+    letter-spacing: .025em;
+    will-change: transform;
+        box-shadow: 0 4px 6px rgba(50,50,93,.11), 0 1px 3px rgba(0,0,0,.08);
+
+    &:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 7px 14px rgba(50,50,93,.1), 0 3px 6px rgba(0,0,0,.08);
+    }
+}
+
+.rcrm_closeButton
+{
+    background-color: #F2F2F2;
+    border: none;
+    color: black;
+    padding: 10px 30px;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    cursor: pointer;
+    width: 45%;
+    height: 35px;
+    outline: none;
+    border-radius: 2px;
+    
+}
+.full-width
+{
+    width:100%;
+}
+
+// .half-width-button
+// {
+//     background-color: #064BE2;
+//     border: none;
+//     color: white;
+//     padding: 10px 0px;
+//     text-decoration: none;
+//     display: inline-block;
+//     font-size: 13px;
+//     cursor: pointer;
+//     height: 35px;
+//     width:45%;
+//     border-radius: 2px;
+// }
+
+.half-width-button{
+    width: 50%;
+}
+
+.rcrm-rtl-flex
+{
+    direction: rtl;
+    display: flex;
+}
+
+
+.rcrm-form-edit-button
+{
+   width: 25px;
+   height: 25px;
+   outline: none;
+   border-radius: 11px;
+
+}
+
+.primary-btn
+{
+  border: 1px solid $color-primary;
+  color: white;
+  background-color: $color-primary;
+}
+.secondary-btn
+{
+  border: 1px solid #ddd;
+  border-color: #ddd;
+  background-color: white;
+}
+
+
+.rcrm-fixed-bottom{
+        position: fixed;
+    bottom: 15px;
+    display: flex;
+    width: 88%;
+  
+}
+
+  .rcrm-success-button{
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 11px;
+            text-align: center;
+            white-space: nowrap;
+            font-size: 13px;
+            border-radius: 2.8px;
+            font-weight: 500;
+            height: auto;
+            background-color: #15dc80;
+            border-color: transparent;
+            color: #fff;
+            text-decoration: none;
+            width: 100%;
+
+            &:hover{
+                    background-color: #00B963;
+                    border-color: transparent;
+                    color: #fff;
+            }
+            &:focus{
+                background-color: #00B963 !important;
+                background: #00B963 !important;
+                border-color: transparent !important;
+                color: #fff;
+                outline: none !important;
+        }
+    }
+
+    .rcrm-back-button{
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 11px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 13px;
+        border-radius: 2.8px;
+        font-weight: 500;
+        height: auto;
+        background-color: white;
+        border: 1px solid #ebebeb;
+        color: #777;
+        text-decoration: none;
+        width: 100%;
+
+        &:hover{
+                background-color: white;
+                border: 1px solid #ebebeb;
+                color: #777;
+        }
+
+        &:focus{
+            background-color: white;
+            border: 1px solid #ebebeb;
+            color: #777;
+    }
+}
+
+    .rcrm-btn-round{
+        width: 40px;
+        height: 40px;
+        border-radius: 50px;
+        line-height: 2.2;
+        text-align: center;
+        
+    }
+    .rcrm-assign-job{
+        background-color: #FFFBDF;
+        i{
+            color: #F7B764;
+            font-size: 18px;
+        }
+    }
+    .rcrm-add-to-hotlist{
+        background-color: #FFF3F6;
+        border: transparent;
+        i{
+            color: #FF3860;
+            font-size: 18px;
+        }
+    }
+    .rcrm-add-appointment{
+        background-color: #FFFEE6;
+        i{
+            color: #FFE95F;
+            font-size: 18px;
+        }
+    }
+    .rcrm-add-task{
+        background-color: #FFFEE6;
+        i{
+            color: #F7B764;
+            font-size: 18px;
+        }
+    }
