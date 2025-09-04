@@ -260,6 +260,24 @@
     // About
     let about = norm(getAboutSection());
 
+    // Profile picture (safe selectors with fallbacks)
+    let profilePic = '';
+    try {
+      const imgCandidates = [
+        'img.pv-top-card-profile-picture__image',
+        'img[alt*="profile" i]',
+        'img[alt*="photo" i]',
+        'img.pv-top-card__photo',
+        'img.presence-entity__image',
+        'img[src*="/dms/image"]',
+      ];
+      for (const sel of imgCandidates) {
+        const node = q(sel);
+        const src = node ? (node.currentSrc || node.src || node.getAttribute('data-delayed-url') || '') : '';
+        if (src && /^https?:\/\//i.test(src)) { profilePic = src; break; }
+      }
+    } catch {}
+
     // Fallbacks via meta if missing
     if (!name || !headline) {
       const meta = metaFallbackNameHeadline();
@@ -267,7 +285,7 @@
       if (!headline && meta.headline) headline = norm(meta.headline);
     }
 
-    return { name, headline, about };
+    return { name, headline, about, profilePic };
   }
 
   async function scrapeContactInfo(includeContact) {
@@ -664,7 +682,7 @@
     await autoScroll();
 
     const profileUrl = getProfileUrl();
-    let basics = { name: '', headline: '', about: '' };
+    let basics = { name: '', headline: '', about: '', profilePic: '' };
     let experience = [];
     let education = [];
     let licenses = [];
@@ -718,6 +736,7 @@
       name: basics.name,
       headline: basics.headline,
       about: basics.about,
+      profilePic: basics.profilePic || '',
       experience,
       education,
       licenses,

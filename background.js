@@ -44,7 +44,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }
         }, 120000);
 
-        const handleResult = (resp) => {
+        const handleResult = async (resp) => {
           if (responded || navAbort) return;
           if (!resp || !resp.ok) {
             responded = true;
@@ -52,13 +52,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ ok: false, error: resp && resp.error ? resp.error : 'Scrape failed.' });
             return;
           }
-          chrome.storage.local.set({ lastProfileData: resp.data }, () => {
-            if (!responded) {
-              responded = true;
-              clearGuards();
-              sendResponse({ ok: true, data: resp.data });
-            }
-          });
+          try {
+            await chrome.storage.session.set({ lastScrape: resp.data });
+          } catch (e) {
+            // Session storage not available? fall back to local
+            try { await chrome.storage.local.set({ lastScrape: resp.data }); } catch {}
+          }
+          if (!responded) {
+            responded = true;
+            clearGuards();
+            sendResponse({ ok: true, data: resp.data });
+          }
         };
 
         const sendScrape = () =>
@@ -133,9 +137,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // keep sendResponse alive
   }
 
-  if (request.type === 'GET_LAST_DATA') {
-    chrome.storage.local.get('lastProfileData', (res) => {
-      sendResponse({ ok: true, data: res.lastProfileData || null });
+  if (request.type === 'GET_LAST_SCRAPE' || request.type === 'GET_LAST_DATA') {
+    chrome.storage.session.get('lastScrape').then((res) => {
+      const data = res.lastScrape || null;
+      if (data) { sendResponse({ ok: true, data }); return; }
+      // fallback to local if session empty
+      chrome.storage.local.get('lastScrape', (res2) => {
+        sendResponse({ ok: true, data: res2.lastScrape || null });
+      });
     });
     return true;
   }
@@ -144,16 +153,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'PARTIAL_DATA') {
     try {
       const { section, data } = request;
-      chrome.storage.local.get('lastProfileData', (res) => {
-        const prev = res.lastProfileData || {};
+      chrome.storage.session.get('lastScrape').then((res) => {
+        const prev = res.lastScrape || {};
         const merged = { ...prev };
         if (section && typeof section === 'string') {
           merged[section] = data;
         } else if (data && typeof data === 'object') {
           Object.assign(merged, data);
         }
-        chrome.storage.local.set({ lastProfileData: merged }, () => {
+        chrome.storage.session.set({ lastScrape: merged }).then(() => {
           sendResponse({ ok: true });
+        }).catch(() => {
+          // fallback to local
+          chrome.storage.local.set({ lastScrape: merged }, () => sendResponse({ ok: true }));
         });
       });
     } catch (e) {
@@ -161,4 +173,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true;
   }
+
+  // Optional explicit save hook (e.g., from popup button)
+  if (request.type === 'SAVE_LAST_SCRAPE') {
+    chrome.storage.session.set({ lastScrape: request.data }).then(() => {
+      sendResponse({ ok: true });
+    }).catch(() => {
+      chrome.storage.local.set({ lastScrape: request.data }, () => sendResponse({ ok: true }));
+    });
+    return true;
+  }
+
+  // TODO: login/auth handshake for future integration
+  if (request.type === 'AUTH_LOGIN') {
+    // TODO: integrate with OptyMatch auth API here
+    sendResponse({ ok: false, error: 'Not implemented' });
+    return true;
+  }
+
+  // TODO: push to ATS backend in future step
+  if (request.type === 'PUSH_TO_ATS') {
+    // TODO: send cached profile to backend ATS API here
+    sendResponse({ ok: false, error: 'Not implemented' });
+    return true;
+  }
 });
+
+// Expose helpers for future UI modules (MV3 service worker scope)
+// Note: Not accessible from page DevTools directly; popup/content can relay.
+async function saveLastScrape(data) {
+  try { await chrome.storage.session.set({ lastScrape: data }); }
+  catch { await chrome.storage.local.set({ lastScrape: data }); }
+}
+async function getLastScrape() {
+  try {
+    const res = await chrome.storage.session.get('lastScrape');
+    if (res && res.lastScrape) return res.lastScrape;
+    const res2 = await chrome.storage.local.get('lastScrape');
+    return res2.lastScrape || null;
+  } catch {
+    const res2 = await chrome.storage.local.get('lastScrape');
+    return res2.lastScrape || null;
+  }
+}
+
+// Attach to global for import by future UI scripts
+globalThis.saveLastScrape = saveLastScrape;
+globalThis.getLastScrape = getLastScrape;

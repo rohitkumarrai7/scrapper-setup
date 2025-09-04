@@ -1,53 +1,42 @@
-# LinkedIn Profile Scraper (MV3)
+# OptyMatch LinkedIn/Naukri Scraper (MV3)
 
-A Chrome Extension that scrapes full LinkedIn profile data (including skills and recent comments) and exports a formatted PDF. No external API or backend server is used.
+A Chrome Extension that scrapes full LinkedIn profile data and caches the latest structured JSON for seamless future UI and API integration. No external backend is required.
 
 ## Features
 
 - Scrape from any LinkedIn profile page:
-  - Name, Headline, About
+  - Name, Headline, About, Profile Pic URL
   - Experience (all visible jobs)
   - Education
   - Licenses & Certifications
   - Contact Info (opens modal and extracts if available)
-  - Top Skills
-    - Detects and opens the "Show all skills" modal
-    - Scrolls to load all skills inside the modal
-    - Closes the modal automatically
+  - Skills and Top Skills (opens and scrolls skill modal when needed)
   - Recent Comments (last 7 days)
-    - Loads the Activity → Comments page HTML
-    - Parses comment text, timestamp, and post link
-    - Filters to only the last 7 days
-- Generate a clean, structured PDF using jsPDF
-- Minimal popup UI with options and status messages
-- Stores last scraped result in `chrome.storage.local` and allows reloading
+- Caches the latest result using `chrome.storage.session` with fallback to `chrome.storage.local`
+- Minimal popup UI to trigger scraping and validate cached data
+- Debug helper available via DevTools: `getLastScrape()`
 
 ## Project Structure
 
 - `manifest.json` — MV3 manifest
-- `background.js` — message router and storage
+- `background.js` — message router and cache helpers (`saveLastScrape`, `getLastScrape`)
 - `content.js` — the DOM scraper (runs on `linkedin.com`)
-- `popup.html` — popup UI
-- `popup.js` — popup controller (sends messages, handles status, triggers PDF)
-- `pdfGenerator.js` — loads jsPDF from local file and builds the PDF
-- `libs/jspdf.umd.min.js` — jsPDF UMD build (you add this file locally)
+- `popup.html` — minimal UI aligned with OptyMatch design direction
+- `popup.js` — popup controller (triggers scrape, saves/loads cache, logs data)
+- `libs/` — no longer required for jsPDF
+- Removed: `pdfGenerator.js` usage (PDF generation deprecated)
 
-Removed/Unneeded for extension packaging:
+Unrelated to extension packaging (safe to keep locally but excluded from CRX):
 - `server.js`, `scraper.js`, `models/`, `database.sqlite`, `node_modules/`
 
 ## Setup
 
-1. Download jsPDF UMD build:
-   - Get jsPDF v2.x UMD bundle (e.g., from https://github.com/parallax/jsPDF/releases)
-   - Create a folder `libs/` in the project root
-   - Save the file as `libs/jspdf.umd.min.js`
-
-2. Load the extension in Chrome:
+1. Load the extension in Chrome:
    - Open Chrome → Menu → More Tools → Extensions
    - Enable Developer mode (top-right toggle)
    - Click "Load unpacked" and select this project folder
 
-## Usage
+## Usage (Cache-first flow)
 
 1. Log into LinkedIn and open a profile page (URL like `https://www.linkedin.com/in/...`).
 2. Click the extension icon to open the popup.
@@ -55,48 +44,39 @@ Removed/Unneeded for extension packaging:
    - Include Comments
    - Include Skills
    - Include Contact Info
-4. Click "Scrape Full Profile". The status will update.
-5. When complete, click "Download PDF" to save the formatted profile.
-6. You can click "View Last Data" to reload and export the previously scraped result.
+4. Click "Scrape Profile". The status will display progress.
+5. When complete, the result is auto-saved to the in-memory cache.
+6. Click "View Last" to fetch from cache and log the JSON to the console.
+   - You can also run `getLastScrape()` in the popup DevTools console to print the cached data.
 
-## Notes on Scraping
+## Notes on Scraping Stability
 
-- Skills Modal:
-  - The content script looks for buttons like "Show all skills".
-  - It clicks the button, waits for the modal, scrolls to load all entries, collects them, and closes the modal.
-- Comments (Last 7 days):
-  - The content script fetches the `…/recent-activity/comments/` page HTML and parses it for comments.
-  - It attempts to capture comment text, timestamps (relative or absolute) and the source post link, and keeps only those within the last 7 days.
-  - If LinkedIn changes its markup, selectors may need updates.
+- Steps are guarded with per-step timeouts and progress updates.
+- Selectors focus on resilient patterns and safe fallbacks.
+- Heavy sections (Skills, Contact, Comments) have fetch/SPA/modal fallbacks with timeouts.
 
 ## Permissions
 
 - `activeTab`, `tabs` — to read the active tab URL and message the page
 - `scripting` — MV3 requirement for script interactions
-- `storage` — to persist last scraped data
-- `host_permissions` — `https://www.linkedin.com/*` so the content script can run and fetch the comments page
+- `storage` — to cache the last scraped data
+- `host_permissions` — `https://www.linkedin.com/*` so the content script can run and fetch deep pages
 
 ## Troubleshooting
 
 - Not on a LinkedIn profile:
-  - The popup will show an error if you try to scrape from a non-LinkedIn page.
-- Missing jsPDF:
-  - Ensure `libs/jspdf.umd.min.js` exists; the popup loads it to generate PDFs. No CDN is used.
+  - You’ll see an error if you try to scrape from a non-profile page.
 - Empty sections:
-  - Some profiles hide sections or require scrolling or connection privileges; results may vary.
+  - Some profiles hide sections or require scrolling/connection privileges; results may vary.
 - Comments older than 7 days:
   - We filter by parsed timestamps. If timestamps are ambiguous, some items might be omitted.
 
-## Packaging Tips
+## Changelog (Refactor)
 
-Before zipping and publishing, remove non-extension files/folders:
-- `server.js`
-- `scraper.js`
-- `models/`
-- `database.sqlite`
-- `node_modules/`
-
-These are not necessary for the extension and may be rejected or increase package size.
+- Removed jsPDF and all PDF download features
+- Added session cache helpers and DevTools `getLastScrape()`
+- Simplified popup UI to a cache-first workflow
+- Added profile image URL to scraped basics
 
 ## License
 
