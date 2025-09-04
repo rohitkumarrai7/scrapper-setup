@@ -16,7 +16,7 @@ function getOptions() {
 }
 
 // Longer timeout window for end-to-end scrape
-const TIMEOUT_MS = 90000;
+const TIMEOUT_MS = 120000;
 
 function sendMessageWithTimeout(msg) {
   return new Promise((resolve, reject) => {

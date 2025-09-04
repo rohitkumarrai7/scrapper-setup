@@ -15,8 +15,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       const baseUrl = `https://www.linkedin.com/in/${inMatch[2]}/`;
 
+      let responded = false;
       const proceed = () => {
-        let responded = false;
         let navAbort = false;
         const clearGuards = () => {
           try { chrome.tabs.onUpdated.removeListener(onUpdatedGuard); } catch {}
@@ -123,10 +123,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (done) return;
           if (tabId === tab.id && info.status === 'complete' && updatedTab && updatedTab.url && updatedTab.url.startsWith(baseUrl)) {
             done = true;
-            chrome.tabs.onUpdated.removeListener(onUpdated);
+            try { chrome.tabs.onUpdated.removeListener(onUpdated); } catch {}
+            try { clearTimeout(navWatchdog); } catch {}
             proceed();
           }
         };
+        // Navigation watchdog to avoid hanging the channel if "complete" never fires
+        const navWatchdog = setTimeout(() => {
+          if (!done && !responded) {
+            done = true;
+            try { chrome.tabs.onUpdated.removeListener(onUpdated); } catch {}
+            try { /* no-op */ } catch {}
+            try { sendResponse({ ok: false, error: 'Navigation to base profile timed out.' }); } catch {}
+          }
+        }, 20000);
         chrome.tabs.onUpdated.addListener(onUpdated);
         chrome.tabs.update(tab.id, { url: baseUrl });
         return true; // keep channel open

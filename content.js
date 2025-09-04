@@ -838,12 +838,29 @@
           .join('\n\n');
         if (nested) txt = nested;
       }
-      if (txt) return txt;
+      if (txt) return cleanAboutText(txt);
     }
     // Fallback to previously scraped basics if available later
     const nodes = Array.from(document.querySelectorAll('.pv-about__summary-text, .lt-line-clamp__raw-line, .lt-line-clamp__line, section[id*="about" i] p, .white-space-pre, .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]'));
     const parts = nodes.map((n) => (n.innerText || n.textContent || '').trim()).filter(Boolean);
-    return parts.join('\n\n').trim();
+    return cleanAboutText(parts.join(' ').trim());
+  }
+
+  function cleanAboutText(txt) {
+    if (!txt) return '';
+    let s = (txt || '').replace(/\s+/g, ' ').trim();
+    // Split into sentences on punctuation boundaries
+    const sentences = s.split(/(?<=[.!?])\s+/);
+    const seen = new Set();
+    const out = [];
+    for (let sen of sentences) {
+      const t = (sen || '').trim();
+      if (!t) continue;
+      if (seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out.join(' ');
   }
 
   function getRecentComments() {
@@ -873,6 +890,7 @@
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg && msg.type === 'PING') { sendResponse({ type: 'PONG' }); return; }
     if (msg && msg.type === 'DO_SCRAPE') {
       (async () => {
         try {
