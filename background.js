@@ -65,6 +65,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }
         };
 
+        const ping = (cb) => {
+          chrome.tabs.sendMessage(tab.id, { type: 'PING' }, (pong) => {
+            if (chrome.runtime.lastError) { cb(false); return; }
+            cb(!!pong && pong.type === 'PONG');
+          });
+        };
+
         const sendScrape = () =>
           chrome.tabs.sendMessage(
             tab.id,
@@ -73,6 +80,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               if (chrome.runtime.lastError) {
                 const msg = chrome.runtime.lastError.message || '';
                 if (/Receiving end does not exist/i.test(msg)) {
+                  // Try to inject and ping before retrying scrape
                   chrome.scripting.executeScript(
                     { target: { tabId: tab.id }, files: ['content.js'] },
                     () => {
@@ -84,21 +92,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         }
                         return;
                       }
-                      chrome.tabs.sendMessage(
-                        tab.id,
-                        { type: 'DO_SCRAPE', options: request.options || {} },
-                        (resp2) => {
-                          if (chrome.runtime.lastError) {
-                            if (!responded) {
-                              responded = true;
-                              clearGuards();
-                              sendResponse({ ok: false, error: chrome.runtime.lastError.message });
-                            }
-                            return;
+                      ping((alive) => {
+                        if (!alive) {
+                          if (!responded) {
+                            responded = true;
+                            clearGuards();
+                            sendResponse({ ok: false, error: 'Content script not responding after injection.' });
                           }
-                          handleResult(resp2);
+                          return;
                         }
-                      );
+                        chrome.tabs.sendMessage(
+                          tab.id,
+                          { type: 'DO_SCRAPE', options: request.options || {} },
+                          (resp2) => {
+                            if (chrome.runtime.lastError) {
+                              if (!responded) {
+                                responded = true;
+                                clearGuards();
+                                sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+                              }
+                              return;
+                            }
+                            handleResult(resp2);
+                          }
+                        );
+                      });
                     }
                   );
                   return; // keep channel open
@@ -113,7 +131,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               handleResult(resp);
             }
           );
-        sendScrape();
+
+        // Preflight ping: if alive, scrape; else try injection path
+        ping((alive) => {
+          if (alive) { sendScrape(); return; }
+          chrome.scripting.executeScript(
+            { target: { tabId: tab.id }, files: ['content.js'] },
+            () => {
+              if (chrome.runtime.lastError) {
+                if (!responded) {
+                  responded = true;
+                  clearGuards();
+                  sendResponse({ ok: false, error: 'Failed to inject content script: ' + chrome.runtime.lastError.message });
+                }
+                return;
+              }
+              // Ping again then scrape
+              ping((alive2) => {
+                if (!alive2) {
+                  if (!responded) {
+                    responded = true;
+                    clearGuards();
+                    sendResponse({ ok: false, error: 'Content script not responding after injection.' });
+                  }
+                  return;
+                }
+                sendScrape();
+              });
+            }
+          );
+        });
       };
 
       // If not already on base profile URL, navigate first and wait

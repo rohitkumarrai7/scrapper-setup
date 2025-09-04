@@ -242,14 +242,89 @@
     return unique;
   }
 
-  // Extract name, headline, and about from the profile top and About section
+  // Dedicated parsers for required fields
+  function getExperience() {
+    progress('experience', 'collect');
+    const out = [];
+    try {
+      // Look for the Experience section by heading text
+      const sections = qa('section');
+      for (const sec of sections) {
+        const h2 = q('h2, h3', sec);
+        if (!h2 || !/experience/i.test(h2.textContent || '')) continue;
+        const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
+        for (const li of items) {
+          const title = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)));
+          // Company line often in a secondary line
+          let company = norm(text(q('.t-14.t-normal.t-black, .t-14.t-normal, .align-self-center span.t-14.t-normal', li)));
+          if (!company) {
+            const alt = q('.display-flex span[aria-hidden="true"]', li);
+            if (alt) company = norm(text(alt));
+          }
+          const dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
+          if (title || company || dateRange) out.push({ company, title, dateRange });
+        }
+        break;
+      }
+    } catch (e) { console.warn('Experience parse failed', e); }
+    return out;
+  }
+
+  function getEducation() {
+    progress('education', 'collect');
+    const out = [];
+    try {
+      const sections = qa('section');
+      for (const sec of sections) {
+        const h2 = q('h2, h3', sec);
+        if (!h2 || !/education/i.test(h2.textContent || '')) continue;
+        const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
+        for (const li of items) {
+          const school = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)));
+          const degree = norm(text(q('.t-14.t-normal, .pv-entity__degree-name, .t-14.t-normal.t-black', li)));
+          const dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
+          if (school || degree || dateRange) out.push({ school, degree, dateRange });
+        }
+        break;
+      }
+    } catch (e) { console.warn('Education parse failed', e); }
+    return out;
+  }
+
+  function getCertifications() {
+    progress('certifications', 'collect');
+    const out = [];
+    try {
+      const sections = qa('section');
+      for (const sec of sections) {
+        const h2 = q('h2, h3', sec);
+        if (!h2 || !/(licenses?\s*&?\s*certifications?|certifications?)/i.test(h2.textContent || '')) continue;
+        const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
+        for (const li of items) {
+          const name = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)));
+          const issuer = norm(text(q('.t-14.t-normal, .pv-entity__secondary-title, .t-14.t-normal.t-black', li)));
+          // Prefer a visible date or time element
+          let date = norm(text(q('.t-14.t-normal.t-black--light, time', li)));
+          if (!date) {
+            const alt = q('.pvs-entity__caption-wrapper', li);
+            if (alt) date = norm(text(alt));
+          }
+          if (name || issuer || date) out.push({ name, issuer, date });
+        }
+        break;
+      }
+    } catch (e) { console.warn('Certifications parse failed', e); }
+    return out;
+  }
+
   async function scrapeBasics() {
     // Ensure top of page has rendered
-    await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, header h1');
+    await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]', 20000);
+    await autoScroll();
 
     // Name
     let name = '';
-    const nameNode = q('h1.text-heading-xlarge, .pv-text-details__left-panel h1, header h1');
+    const nameNode = q('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]');
     name = norm(text(nameNode));
 
     // Headline
@@ -394,7 +469,7 @@
       let profileSlug = '';
       try {
         const m = (location.href || '').match(/https?:\/\/(?:[a-zA-Z0-9-]+\.)*linkedin\.com\/in\/([^\/?#]+)\/?/);
-        if (m) profileSlug = m[1].toLowerCase();
+        if (m) profileSlug = (m[1] || '').toLowerCase();
       } catch {}
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
         try {
@@ -702,9 +777,9 @@
     }
 
     progress('sections');
-    try { experience = scrapeListSectionByHeading(/experience/i); } catch (e) { console.warn('Exp failed', e); }
-    try { education = scrapeListSectionByHeading(/education/i); } catch (e) { console.warn('Edu failed', e); }
-    try { licenses = scrapeListSectionByHeading(/licenses?\s*&?\s*certifications?/i); } catch (e) { console.warn('Licenses failed', e); }
+    try { experience = getExperience(); } catch (e) { console.warn('Exp failed', e); }
+    try { education = getEducation(); } catch (e) { console.warn('Edu failed', e); }
+    try { licenses = getCertifications(); } catch (e) { console.warn('Licenses failed', e); }
     sendPartial('sections', { experience, education, licenses });
 
     progress('contact');
@@ -714,18 +789,13 @@
     const skillsP = runWithStepTimeout('skills', () => scrapeSkills(!!options.includeSkills), 20000, []);
     progress('top-skills');
     const topSkillsP = runWithStepTimeout('top-skills', () => scrapeTopSkills(!!options.includeSkills), 20000, []);
-    const commentsP = options.includeComments
-      ? runWithStepTimeout('comments', () => fetchCommentsForLast7Days(profileUrl), 20000, [])
-      : Promise.resolve([]);
-    const [contactRes, skillsRes, topSkillsRes, commentsRes] = await Promise.all([contactP, skillsP, topSkillsP, commentsP]);
+    const [contactRes, skillsRes, topSkillsRes] = await Promise.all([contactP, skillsP, topSkillsP]);
     contactInfo = contactRes;
     skills = Array.isArray(skillsRes) ? skillsRes : [];
     topSkills = Array.isArray(topSkillsRes) ? topSkillsRes : [];
-    comments = Array.isArray(commentsRes) ? commentsRes : [];
     sendPartial('contact', contactInfo);
     sendPartial('skills', skills);
     sendPartial('topSkills', topSkills);
-    if (options.includeComments) sendPartial('comments', comments);
 
     progress('assemble');
     // Dedup topSkills against skills and limit
@@ -743,7 +813,6 @@
       contactInfo,
       skills,
       topSkills: topClean.length ? topClean : (Array.isArray(skills) ? skills.slice(0, 10) : []),
-      comments,
       scrapedAt: new Date().toISOString(),
       complete: true,
     };
@@ -799,7 +868,7 @@
       history.pushState({}, '', url);
       await waitForSelector('main, .pvs-list__container', 6000);
       await scrollUntilLoaded(document.scrollingElement || document.documentElement, 40, 220);
-      const res = scrapeListSectionByHeading(/licenses?\s*&?\s*certifications?/i);
+      const res = getCertifications();
       try { history.pushState({}, '', orig); } catch {}
       return res;
     } catch (e) {

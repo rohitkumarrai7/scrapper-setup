@@ -9,7 +9,6 @@ const setStatus = (msg, muted = false) => {
 
 function getOptions() {
   return {
-    includeComments: $('optComments') ? $('optComments').checked : false,
     includeSkills: $('optSkills') ? $('optSkills').checked : false,
     includeContact: $('optContact') ? $('optContact').checked : false,
   };
