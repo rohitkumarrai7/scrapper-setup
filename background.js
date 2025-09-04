@@ -57,6 +57,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
           const attachHandlers = (p) => {
             p.onMessage.addListener(async (msg) => {
+              try { console.log('[RCRM-BG] port msg:', msg && msg.type); } catch {}
               if (!msg || typeof msg !== 'object') return;
               if (msg.type === 'PROGRESS') {
                 if (msg.partialKey && msg.partialData) {
@@ -93,6 +94,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
 
             p.onDisconnect.addListener(async () => {
+              try { console.warn('[RCRM-BG] port disconnected:', chrome.runtime.lastError && chrome.runtime.lastError.message); } catch {}
               if (settled) return;
               const lastErr = chrome.runtime.lastError && chrome.runtime.lastError.message;
               if (!reinjected) {
@@ -133,20 +135,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
           };
 
+          // Always inject first to avoid immediate disconnects on tabs without our content
           try {
-            port = chrome.tabs.connect(tab.id, { name: 'scrape-port' });
-            attachHandlers(port);
-            port.postMessage({ type: 'START_SCRAPE', options: request.options || {} });
+            chrome.scripting.executeScript(
+              { target: { tabId: tab.id }, files: ['content.js'] },
+              () => {
+                if (chrome.runtime.lastError) {
+                  settled = true;
+                  cleanup();
+                  if (!responded) {
+                    responded = true;
+                    sendResponse({ ok: false, error: 'Failed to inject content script: ' + chrome.runtime.lastError.message });
+                  }
+                  return;
+                }
+                // Connect after injection
+                try {
+                  port = chrome.tabs.connect(tab.id, { name: 'scrape-port' });
+                  attachHandlers(port);
+                  port.postMessage({ type: 'START_SCRAPE', options: request.options || {} });
+                } catch (e) {
+                  settled = true;
+                  cleanup();
+                  if (!responded) {
+                    responded = true;
+                    sendResponse({ ok: false, error: 'Failed to start port-based scrape: ' + (e && e.message ? e.message : String(e)) });
+                  }
+                }
+              }
+            );
           } catch (e) {
             settled = true;
             cleanup();
             if (!responded) {
               responded = true;
-              sendResponse({ ok: false, error: 'Failed to start port-based scrape: ' + (e && e.message ? e.message : String(e)) });
+              sendResponse({ ok: false, error: 'Failed to inject: ' + (e && e.message ? e.message : String(e)) });
             }
           }
         };
 
+        // Kick off the port-based flow
         startPortFlow();
       };
 

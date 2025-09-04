@@ -54,6 +54,7 @@ function renderProfile(data) {
   const ci = $('contactInfo');
   const sm = $('summary');
   const sk = $('skills');
+  const tsk = $('topSkills');
   const ex = $('experience');
   const ed = $('education');
   const lc = $('certifications');
@@ -61,38 +62,86 @@ function renderProfile(data) {
   if (pic) pic.src = data.profilePic || '';
   if (nm) nm.textContent = data.name || '—';
   if (hl) hl.textContent = data.headline || '—';
+  // Hide standalone URL; we'll show it inside Contact Info instead
   if (url) {
-    url.textContent = data.profileUrl || '';
-    url.onclick = () => { if (data.profileUrl) chrome.tabs.create({ url: data.profileUrl }); };
+    url.textContent = '';
+    url.onclick = null;
   }
 
+  // Contact Info: show ONLY Emails and Phones
   if (ci) {
-    ci.innerHTML = '';
-    const c = data.contactInfo || {};
-    const emails = Array.isArray(c.emails) ? c.emails : [];
-    const phones = Array.isArray(c.phones) ? c.phones : [];
-    const websites = Array.isArray(c.websites) ? c.websites : [];
-    emails.forEach(e => ci.innerHTML += `• Email: ${e}<br/>`);
-    phones.forEach(p => ci.innerHTML += `• Phone: ${p}<br/>`);
-    websites.forEach(w => ci.innerHTML += `• Website: ${w}<br/>`);
-    if (!emails.length && !phones.length && !websites.length) ci.textContent = '—';
+    const emails = Array.isArray(data?.contactInfo?.emails) ? data.contactInfo.emails.filter(Boolean) : [];
+    const phones = Array.isArray(data?.contactInfo?.phones) ? data.contactInfo.phones.filter(Boolean) : [];
+    const rows = [];
+    if (data.profileUrl) rows.push(`<div>• LinkedIn: <a href="${data.profileUrl}" target="_blank" rel="noopener noreferrer">${data.profileUrl}</a></div>`);
+    if (emails.length) rows.push(`<div>• Email: ${emails.join(', ')}</div>`);
+    if (phones.length) rows.push(`<div>• Phone: ${phones.join(', ')}</div>`);
+    ci.innerHTML = rows.join('');
+    if (!emails.length && !phones.length && !data.profileUrl) ci.textContent = '—';
   }
 
-  if (sm) sm.textContent = data.about || '—';
+  // Summary: About only (no headline fallback here)
+  if (sm) sm.textContent = (data.about && data.about.trim()) ? data.about : '—';
 
+  // Sanitize helpers for labels
+  const collapseDupSegments = (s) => {
+    s = (s || '').replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    const mid = Math.floor(s.length / 2);
+    if (s.length % 2 === 0 && s.slice(0, mid) === s.slice(mid)) return s.slice(0, mid).trim();
+    const seps = [' · ', ' | ', ' – ', ' - '];
+    for (const sep of seps) {
+      if (s.includes(sep)) {
+        const parts = s.split(sep).map(p => p.trim()).filter(Boolean);
+        const out = [];
+        for (const p of parts) if (out[out.length - 1] !== p) out.push(p);
+        return out.join(sep);
+      }
+    }
+    return s;
+  };
+  const cleanSkillLabel = (s) => {
+    let x = (s || '').replace(/\s+/g, ' ').trim();
+    if (!x) return '';
+    // remove concatenated duplicates like "User JourneysUser Journeys"
+    x = x.replace(/^(.+?)\1$/i, '$1').trim();
+    // remove endorsement counters
+    x = x.replace(/\b\d+\s*endorsements?\b/ig, '').trim();
+    // remove institutions/courses/noise
+    const bad = /(university|college|institute|school|academy|xlri|baddi|executive\s+program|program\b|course\b|certificat(e|ion)|diploma|bachelor|master|mba|b\.\s*tech|m\.\s*tech|budha|solan|campus|degree)/i;
+    if (bad.test(x)) return '';
+    return x;
+  };
+
+  // Top Skills (limit 5)
+  const topArr = Array.isArray(data.topSkills)
+    ? Array.from(new Set(data.topSkills.map(cleanSkillLabel).filter(Boolean))).slice(0, 5)
+    : [];
+  if (tsk) {
+    tsk.innerHTML = topArr.map(s => `<span class="chip">${s}</span>`).join(' ');
+    if (!topArr.length) tsk.textContent = '—';
+  }
+
+  // All Skills (excluding Top Skills to avoid duplication)
   if (sk) {
-    const arr = Array.isArray(data.skills) ? data.skills : [];
-    sk.innerHTML = arr.map(s => `<span class="chip">${s}</span>`).join(' ');
-    if (!arr.length) sk.textContent = '—';
+    const allSkills = Array.isArray(data.skills) ? data.skills.map(cleanSkillLabel).filter(Boolean) : [];
+    const filtered = allSkills.filter(s => !topArr.includes(s));
+    const shown = filtered.length ? filtered : allSkills; // if everything got filtered, show original
+    sk.innerHTML = shown.map(s => `<span class="chip">${s}</span>`).join(' ');
+    if (!shown.length) sk.textContent = '—';
   }
 
   if (ex) {
     const arr = Array.isArray(data.experience) ? data.experience : [];
     ex.innerHTML = arr.map(exp => {
-      const comp = exp.company || '';
-      const title = exp.title || '';
-      const dr = exp.dateRange || '';
-      return `${comp}${comp && title ? ' — ' : ''}${title}${dr ? ` (${dr})` : ''}`;
+      const comp = collapseDupSegments(exp.company || '');
+      const title = collapseDupSegments(exp.title || '');
+      const dr = collapseDupSegments(exp.dateRange || '');
+      return [
+        comp ? `<strong>Company:</strong> ${comp}` : '',
+        title ? `<strong>Designation:</strong> ${title}` : '',
+        dr ? `<strong>Dates:</strong> ${dr}` : ''
+      ].filter(Boolean).join(' · ');
     }).join('<br/>');
     if (!arr.length) ex.textContent = '—';
   }
@@ -100,10 +149,14 @@ function renderProfile(data) {
   if (ed) {
     const arr = Array.isArray(data.education) ? data.education : [];
     ed.innerHTML = arr.map(edc => {
-      const school = edc.school || '';
-      const degree = edc.degree || '';
-      const dr = edc.dateRange || '';
-      return `${school}${school && degree ? ' — ' : ''}${degree}${dr ? ` (${dr})` : ''}`;
+      const school = collapseDupSegments(edc.school || '');
+      const degree = collapseDupSegments(edc.degree || '');
+      const dr = collapseDupSegments(edc.dateRange || '');
+      return [
+        school ? `<strong>College:</strong> ${school}` : '',
+        degree ? `<strong>Degree:</strong> ${degree}` : '',
+        dr ? `<strong>Dates:</strong> ${dr}` : ''
+      ].filter(Boolean).join(' · ');
     }).join('<br/>');
     if (!arr.length) ed.textContent = '—';
   }
@@ -111,10 +164,14 @@ function renderProfile(data) {
   if (lc) {
     const arr = Array.isArray(data.licenses) ? data.licenses : [];
     lc.innerHTML = arr.map(cert => {
-      const name = cert.name || '';
-      const issuer = cert.issuer || '';
-      const dt = cert.date || '';
-      return `${name}${issuer ? ' — ' + issuer : ''}${dt ? ' — ' + dt : ''}`;
+      const name = collapseDupSegments(cert.name || '');
+      const issuer = collapseDupSegments(cert.issuer || '');
+      const dt = collapseDupSegments(cert.date || '');
+      return [
+        name ? `<strong>Certification:</strong> ${name}` : '',
+        issuer ? `<strong>Issuer:</strong> ${issuer}` : '',
+        dt ? `<strong>Date:</strong> ${dt}` : ''
+      ].filter(Boolean).join(' · ');
     }).join('<br/>');
     if (!arr.length) lc.textContent = '—';
   }

@@ -7,6 +7,30 @@
   const qa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const text = (el) => (el ? el.textContent.trim() : '');
 
+  // ---- withOverallTimeout helper (robust overall timeout wrapper) ----
+  function withOverallTimeout(promise, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        reject(new Error(`Scrape operation timed out after ${Math.round(timeoutMs/1000)}s`));
+      }, timeoutMs);
+
+      Promise.resolve(promise).then((res) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(res);
+      }).catch((err) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+  }
+
   // Progress ping to popup
   function progress(step, detail) {
     try { chrome.runtime.sendMessage({ type: 'SCRAPE_PROGRESS', step, detail }); } catch {}
@@ -15,15 +39,6 @@
   // Send partial data to background so popup can retrieve last known good data
   function sendPartial(section, data) {
     try { chrome.runtime.sendMessage({ type: 'PARTIAL_DATA', section, data }); } catch (e) { /* ignore */ }
-  }
-
-  // Overall timeout wrapper for the whole scrape (big profiles need longer)
-  function withOverallTimeout(promise, ms = 170000) {
-    let t;
-    return Promise.race([
-      promise,
-      new Promise((_, rej) => { t = setTimeout(() => rej(new Error('overall-timeout')), ms); })
-    ]).finally(() => clearTimeout(t));
   }
 
   // Run a specific step with its own timeout so one slow step doesn't kill the whole scrape
@@ -217,7 +232,7 @@
           for (const card of cards) {
             const title = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', card)));
             const subtitle = norm(text(q('.t-normal, .t-14.t-normal, .t-black--light, .display-flex span[aria-hidden="true"]', card)));
-            const dates = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, .t-12.t-black--light', card)));
+            const dates = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', card)));
             const description = norm(text(q('.pv-entity__extra-details, .pvs-list__outer-container p, .inline-show-more-text', card)));
             // Drop entries that look like bare filenames (e.g., image attachments like whatever.png)
             const looksLikeFile = (s) => /\.[a-z]{3,4}$/i.test(((s || '').split(/[\s\u00A0]+/).pop() || ''));
@@ -254,20 +269,56 @@
         if (!h2 || !/experience/i.test(h2.textContent || '')) continue;
         const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
         for (const li of items) {
-          const title = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)));
-          // Company line often in a secondary line
-          let company = norm(text(q('.t-14.t-normal.t-black, .t-14.t-normal, .align-self-center span.t-14.t-normal', li)));
-          if (!company) {
-            const alt = q('.display-flex span[aria-hidden="true"]', li);
-            if (alt) company = norm(text(alt));
-          }
-          const dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
-          if (title || company || dateRange) out.push({ company, title, dateRange });
+          let company = norm(text(q('.t-14.t-normal.t-black, .pv-entity__secondary-title, .align-self-center span.t-14.t-normal', li)));
+          let title = norm(text(q('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], span[aria-hidden="true"], .mr1.t-bold', li)));
+          let dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, .pvs-entity__caption span, time', li)));
+
+          // Clean noise: drop skill aggregates and comma-joined skill lines
+          const noisy = /\b\+\d+\s+skills\b/i.test(title) || /\b\+\d+\s+skills\b/i.test(company) || /\bskills\b/i.test(company);
+          if (noisy) { company = ''; title = ''; }
+          // Drop entries that are clearly not jobs
+          if (!company && /\b(\+\d+ skills|User Journeys|Wireframing)\b/i.test(title)) title = '';
+          // Reject if both company and title look empty or too generic
+          if (!(company || title || dateRange)) continue;
+          company = collapseDupSegments(company);
+          title = collapseDupSegments(title);
+          dateRange = collapseDupSegments(dateRange);
+          out.push({ company, title, dateRange });
         }
         break;
       }
     } catch (e) { console.warn('Experience parse failed', e); }
     return out;
+  }
+
+  // Deep fallback: fetch Experience details page
+  async function scrapeExperienceDeep(profileUrl) {
+    try {
+      const base = (profileUrl || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
+      const rootUrl = base ? base[0] : '';
+      const url = rootUrl ? rootUrl + 'details/experience/' : '';
+      const items = [];
+      if (!url) return items;
+      try {
+        const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 15000 });
+        if (res.ok) {
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const cards = doc.querySelectorAll('li, .pvs-list__paged-list-item, .artdeco-list__item');
+          cards.forEach((card) => {
+            const title = norm((card.querySelector('span[aria-hidden="true"], .mr1.t-bold span, .t-bold') || {}).textContent || '');
+            let company = norm((card.querySelector('.t-14.t-normal.t-black, .t-14.t-normal, .align-self-center span.t-14.t-normal') || {}).textContent || '');
+            if (!company) {
+              const alt = card.querySelector('.display-flex span[aria-hidden="true"]');
+              if (alt) company = norm(alt.textContent || '');
+            }
+            const dateRange = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
+            if (title || company || dateRange) items.push({ company, title, dateRange });
+          });
+        }
+      } catch {}
+      return items;
+    } catch { return []; }
   }
 
   function getEducation() {
@@ -280,9 +331,52 @@
         if (!h2 || !/education/i.test(h2.textContent || '')) continue;
         const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
         for (const li of items) {
-          const school = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)));
-          const degree = norm(text(q('.t-14.t-normal, .pv-entity__degree-name, .t-14.t-normal.t-black', li)));
-          const dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
+          // School name (bold line)
+          let school = norm(text(q('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], .mr1.t-bold, .entity-result__primary-subtitle', li)));
+          if (/\.png$|\.jpg$|\.jpeg$/i.test(school)) school = '';
+
+          // Collect all secondary text lines under the card
+          const secTexts = Array.from(li.querySelectorAll('.t-14.t-normal, .t-14.t-normal.t-black, .t-black--light, .pvs-entity__subtitle, .pv-entity__degree-name, .pv-entity__fos, .inline-show-more-text, span[aria-hidden="true"]'))
+            .map(e => (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+
+          // Extract date range
+          let dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
+          if (!dateRange) {
+            const dt = secTexts.find(t => /\b(\d{4})\b.*?(\b(\d{4}|present)\b)/i.test(t));
+            if (dt) dateRange = dt;
+          }
+
+          // Degree and field of study heuristics
+          const DEGREE_PAT = /(b\.?\s?tech|btech|b\.?e\.?|bachelor|m\.?\s?tech|mtech|m\.?e\.?|master|mba|pgdm|diploma|ph\.?d\.?|doctorate|executive\s+program)/i;
+          const SKILL_NOISE = /\b\+\d+\s*skills\b|\bRead more\b/i;
+          let degreeParts = [];
+          for (const t of secTexts) {
+            if (SKILL_NOISE.test(t)) continue;
+            if (DEGREE_PAT.test(t)) degreeParts.push(t);
+          }
+          // Prefer the shortest meaningful degree-like fragment
+          degreeParts = degreeParts.sort((a,b) => a.length - b.length);
+          let degree = degreeParts[0] || '';
+
+          // Try to find a field of study if not already included
+          let field = '';
+          if (!/computer|information|electrical|mechanical|civil|science|engineering|technology|management/i.test(degree)) {
+            const candidate = secTexts.find(t => /computer|information|electrical|mechanical|civil|science|engineering|technology|management/i.test(t));
+            if (candidate && candidate.length < 80) field = candidate;
+          }
+          if (field && degree && !new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(degree)) {
+            degree = `${degree}, ${field}`;
+          }
+
+          // Move obvious program line to degree if mis-captured as school
+          if (/\bExecutive Program\b/i.test(school) && !DEGREE_PAT.test(degree)) { degree = degree ? degree : school; school = ''; }
+
+          // Final cleanup
+          degree = (degree || '').replace(SKILL_NOISE, '').trim();
+          school = collapseDupSegments(school);
+          degree = collapseDupSegments(degree);
+          dateRange = collapseDupSegments(dateRange);
           if (school || degree || dateRange) out.push({ school, degree, dateRange });
         }
         break;
@@ -301,20 +395,32 @@
         if (!h2 || !/(licenses?\s*&?\s*certifications?|certifications?)/i.test(h2.textContent || '')) continue;
         const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
         for (const li of items) {
-          const name = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)));
-          const issuer = norm(text(q('.t-14.t-normal, .pv-entity__secondary-title, .t-14.t-normal.t-black', li)));
-          // Prefer a visible date or time element
-          let date = norm(text(q('.t-14.t-normal.t-black--light, time', li)));
-          if (!date) {
-            const alt = q('.pvs-entity__caption-wrapper', li);
-            if (alt) date = norm(text(alt));
+          let name = norm(text(q('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], span[aria-hidden="true"], .mr1.t-bold', li)));
+          let issuer = norm(text(q('.t-14.t-normal.t-black, .t-14.t-normal, .pvs-entity__subtitle', li)));
+          let date = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
+
+          // Clean noise and duplicates
+          if (/\bIssuer:\b/i.test(issuer)) issuer = issuer.replace(/.*?Issuer:\s*/i, '').trim();
+          if (/\bIssued\s+/i.test(date)) date = date.replace(/.*?(Issued\s+\w+\s+\d{4}).*/i, '$1').trim();
+          if (/\b\+\d+\s+skills\b/i.test(name)) name = '';
+          if (name || issuer || date) {
+            name = collapseDupSegments(name);
+            issuer = collapseDupSegments(issuer);
+            date = collapseDupSegments(date);
+            out.push({ name, issuer, date });
           }
-          if (name || issuer || date) out.push({ name, issuer, date });
         }
         break;
       }
-    } catch (e) { console.warn('Certifications parse failed', e); }
-    return out;
+    } catch (e) {
+      console.warn('Certifications parse failed', e);
+    }
+    // Dedupe by name+issuer+date
+    const key = (x) => [x.name || '', x.issuer || '', x.date || ''].join(' | ').toLowerCase();
+    const seen = new Set();
+    const deduped = [];
+    out.forEach((x) => { const k = key(x); if (k && !seen.has(k)) { seen.add(k); deduped.push(x); } });
+    return deduped;
   }
 
   async function scrapeBasics() {
@@ -338,15 +444,14 @@
     // Profile picture (safe selectors with fallbacks)
     let profilePic = '';
     try {
-      const imgCandidates = [
+      // Prefer explicit avatar nodes to avoid picking random media/images
+      const picSel = [
         'img.pv-top-card-profile-picture__image',
-        'img[alt*="profile" i]',
-        'img[alt*="photo" i]',
-        'img.pv-top-card__photo',
-        'img.presence-entity__image',
-        'img[src*="/dms/image"]',
+        'img.pv-top-card-profile-picture__image--show',
+        'img[data-test-id="hero-summary-card-profile-image"]',
+        'img[alt*="profile" i][src*="media"], img[alt*="Profile" i][src*="media"]',
       ];
-      for (const sel of imgCandidates) {
+      for (const sel of picSel) {
         const node = q(sel);
         const src = node ? (node.currentSrc || node.src || node.getAttribute('data-delayed-url') || '') : '';
         if (src && /^https?:\/\//i.test(src)) { profilePic = src; break; }
@@ -360,7 +465,30 @@
       if (!headline && meta.headline) headline = norm(meta.headline);
     }
 
-    return { name, headline, about, profilePic };
+    // Final fallback: derive name from URL slug if still missing
+    if (!name) {
+      try {
+        const slug = (location.pathname.match(/\/in\/([^\/]+)/) || [,''])[1];
+        if (slug) {
+          name = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+        }
+      } catch {}
+    }
+
+    // Connection degree (e.g., 1st, 2nd)
+    let connectionDegree = '';
+    try {
+      const connNode = q('.dist-value, .pv-top-card--list-bullet li');
+      const raw = norm(text(connNode));
+      if (/\b(?:1st|2nd|3rd|[4-9]th)\b/i.test(raw)) {
+        const m = raw.match(/\b(1st|2nd|3rd|[4-9]th)\b/i);
+        connectionDegree = m ? m[1].toLowerCase() : '';
+      } else if (/degree\s+connection/i.test(raw)) {
+        connectionDegree = raw.replace(/.*?(\b\d+(?:st|nd|rd|th)\b).*?/i, '$1').toLowerCase();
+      }
+    } catch {}
+
+    return { name, headline, about, profilePic, connectionDegree };
   }
 
   async function scrapeContactInfo(includeContact) {
@@ -374,117 +502,88 @@
 
       const harvestFromRoot = (root) => {
         // Only within explicit contact containers to avoid noise
-        const scopes = qa('.pv-contact-info, .pv-contact-info__modal, .pv-contact-info__container, .pv-contact-info__ci-container, .pv-contact-info__contact-type, .pv-contact-info__contact-item', root);
-        const scanRoots = scopes.length ? scopes : [root];
-        scanRoots.forEach((scope) => {
-          // Links
-          qa('a[href^="mailto:"], a[href^="tel:"], a[href^="http"], .pv-contact-info__contact-link', scope).forEach((a) => {
-            const href = a.getAttribute('href') || '';
-            const t = (a.innerText || a.textContent || '').trim();
-            if (/^mailto:/i.test(href)) pushEmail(href.replace(/^mailto:/i, ''));
-            else if (/^tel:/i.test(href)) pushPhone(href.replace(/^tel:/i, ''));
-            else if (/^https?:/i.test(href)) pushSite(href);
-            else if (/@/.test(t)) pushEmail(t);
-          });
-          // Textual blocks within contact containers only
-          qa('.pv-contact-info__contact-type, .pv-contact-info__ci-container, .pv-contact-info__container, .pv-contact-info__contact-item', scope).forEach((el) => {
-            const t = (el.innerText || el.textContent || '').trim();
-            if (!t) return;
-            (t.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).forEach((m) => pushEmail(m));
-            (t.match(/\bhttps?:\/\/\S+/gi) || []).forEach((m) => pushSite(m));
-            (t.match(/\+?[0-9()\[\]\s\-]{6,}/g) || []).forEach((m) => pushPhone(m));
-          });
-        });
+        const scope = root || document;
+        // Emails
+        scope.querySelectorAll('a[href^="mailto:"], .pv-contact-info__contact-type.ci-email a, a[data-control-name*="email"]')
+          .forEach((a) => pushEmail((a.getAttribute('href') || '').replace(/^mailto:/i, '')));
+        // Phones
+        scope.querySelectorAll('a[href^="tel:"], .pv-contact-info__contact-type.ci-phone a, a[data-control-name*="phone"]')
+          .forEach((a) => pushPhone((a.getAttribute('href') || '').replace(/^tel:/i, '')));
+        // Websites
+        scope.querySelectorAll('.pv-contact-info__contact-type.ci-websites a, a[href^="http"], a[href^="https"]')
+          .forEach((a) => pushSite((a.getAttribute('href') || '').trim()));
       };
 
-      // 1) Try in-page modal first (cover anchors and buttons)
-      const btn = q('a#top-card-text-details-contact-info, a[data-control-name="contact_see_more"], a[href*="overlay/contact-info"], a[aria-label*="Contact info" i], button[aria-label*="Contact info" i], button[data-control-name*="contact" i]');
-      if (btn) {
-        await clickIfExists(btn);
-        await waitForSelector('.artdeco-modal[role="dialog"], .pv-contact-info__modal, .pv-contact-info', 15000);
-        const modal = q('.artdeco-modal[role="dialog"], .pv-contact-info__modal, .pv-contact-info');
-        if (modal) {
-          const content = q('.artdeco-modal__content, .pv-contact-info__modal-content, .pv-contact-info, .pv-contact-info__container', modal) || modal;
-          const scopes = qa('.pv-contact-info, .pv-contact-info__modal, .pv-contact-info__container, .pv-contact-info__ci-container', content);
-          (scopes.length ? scopes : [content]).forEach((root) => harvestFromRoot(root));
-          const close = q('button[aria-label*="Dismiss" i], button[aria-label*="Close" i], button.artdeco-modal__dismiss', modal);
-          try { close && close.click(); } catch (e) { console.warn('contact modal close failed', e); }
-        }
-      }
+      const uniq = (arr) => Array.from(new Set((arr || []).map((s) => (s || '').trim()).filter(Boolean)));
 
-      // 2) If still empty, open overlay route in current SPA and parse DOM
-      if (ALLOW_SPA_NAV && !data.emails.length && !data.phones.length && !data.websites.length) {
-        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
+      // 1) Fetch-first: overlay/contact-info (server-rendered, robust)
+      try {
+        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^\/]+\//);
         const base = m ? m[0] : '';
-        const overlayUrl = base ? base + 'overlay/contact-info/' : '';
-        if (overlayUrl) {
-          try {
-            const orig = location.href;
-            history.pushState({}, '', overlayUrl);
-            await waitForSelector('main, #artdeco-modal-outlet, .pv-contact-info');
-            const root = q('#artdeco-modal-outlet .artdeco-modal, .pv-contact-info') || document;
-            const scopes = qa('.pv-contact-info, .pv-contact-info__container, .pv-contact-info__ci-container', root);
-            (scopes.length ? scopes : []).forEach((r) => harvestFromRoot(r));
-            try { history.pushState({}, '', orig); } catch {}
-          } catch (e) { console.warn('Contact SPA overlay parse failed', e); try { history.back(); } catch {} }
+        const url = base ? base + 'overlay/contact-info/' : '';
+        if (url) {
+          const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 15000 });
+          if (res.ok) {
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const root = doc.querySelector('.pv-contact-info, .pv-contact-info__container, main, body') || doc;
+            harvestFromRoot(root);
+          }
         }
-      }
+      } catch {}
 
-      // 3) As a fallback, fetch the overlay HTML directly and parse
+      // If still empty, 2) Click the Contact info button and parse modal
       if (!data.emails.length && !data.phones.length && !data.websites.length) {
         try {
-          const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
-          const base = m ? m[0] : '';
-          const url = base ? base + 'overlay/contact-info/' : '';
-          if (url) {
-            const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 15000 });
-            if (res.ok) {
-              const html = await res.text();
-              const doc = new DOMParser().parseFromString(html, 'text/html');
-              const root = doc.querySelector('.pv-contact-info, .pv-contact-info__container, main') || doc;
-              const scopes = Array.from(root.querySelectorAll('.pv-contact-info, .pv-contact-info__container, .pv-contact-info__ci-container'));
-              scopes.forEach((r) => harvestFromRoot(r));
+          const btn = document.querySelector(
+            'a[href*="overlay/contact-info"], a[aria-label*="Contact info" i], button[aria-label*="Contact info" i], .pv-top-card a[data-control-name*="contact_see_more"]'
+          );
+          if (btn) {
+            (btn instanceof HTMLElement) && btn.click();
+            const modal = await waitForSelector('.pv-contact-info, .artdeco-modal, [role="dialog"] .pv-contact-info__container', 8000);
+            if (modal) {
+              harvestFromRoot(modal);
+              // Close modal if a dismiss button exists
+              const close = modal.querySelector('button[aria-label*="Dismiss" i], button.artdeco-modal__dismiss, button[aria-label*="Close" i]');
+              try { close && (close instanceof HTMLElement) && close.click(); } catch {}
             }
           }
-        } catch (e) { console.warn('Contact overlay fetch failed', e); }
+        } catch {}
       }
 
-      // Dedup and normalize
-      const uniq = (arr) => Array.from(new Set(arr.map((s) => s.trim()).filter(Boolean)));
-      // sanitize emails
-      const emailRe = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-      data.emails = uniq(data.emails).filter((e) => emailRe.test(e));
-      // sanitize phones (7-15 digits, avoid obvious year ranges)
-      const onlyDigits = (s) => (s.match(/\d/g) || []).join('');
-      data.phones = uniq(data.phones)
-        .map((p) => p.replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-'))
-        .filter((p) => {
-          const d = onlyDigits(p);
-          if (d.length < 7 || d.length > 15) return false;
-          // reject patterns like "2018 - 2021"
-          if (/\b\d{4}\s*-\s*\d{2,4}\b/.test(p)) return false;
-          return true;
-        });
+      // 3) As last resort, a gentle page-level scrape near top card
+      if (!data.emails.length && !data.phones.length && !data.websites.length) {
+        try {
+          const top = document.querySelector('.pv-top-card, [data-test-id="hero-summary-card"], main');
+          if (top) harvestFromRoot(top);
+        } catch {}
+      }
+
+      // Clean and normalize
+      data.emails = uniq(data.emails).filter((e) => /@/.test(e));
+      data.phones = uniq(data.phones).map((p) => p.replace(/[^+\d\-()\s]/g, '').replace(/\s+/g, ' ').trim());
+      data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u));
+
       // sanitize websites: only http(s). For linkedin.com, only keep this profile's own /in/<slug> URL.
       let profileSlug = '';
       try {
-        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/([^/]+)\//);
-        if (m && m[1]) profileSlug = m[1].toLowerCase();
+        const m2 = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/([^\/]+)\//);
+        if (m2 && m2[1]) profileSlug = m2[1].toLowerCase();
       } catch {}
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
         try {
           const { hostname, pathname } = new URL(u);
-          const host = hostname.replace(/^www\./, '').toLowerCase();
-          if (host !== 'linkedin.com' && host !== 'www.linkedin.com') return true; // keep external domains
-          // For linkedin.com, keep ONLY the current profile base URL
-          const m2 = pathname.match(/^\/in\/([^\/]+)\/?$/);
-          if (m2 && profileSlug && m2[1].toLowerCase() === profileSlug) return true;
-          return false; // drop all other linkedin routes (company, groups, others' profiles, newsletters, etc.)
+          if (/linkedin\.com$/i.test(hostname)) {
+            if (profileSlug) return /\/in\//i.test(pathname) && pathname.toLowerCase().includes(profileSlug);
+            return false;
+          }
+          return true;
         } catch { return false; }
       });
+
       return data;
     } catch (e) {
-      console.warn('Contact info scrape failed:', e);
+      console.warn('Contact info scrape failed', e);
       return null;
     }
   }
@@ -505,8 +604,6 @@
       const digits = (s.match(/\d/g) || []).length;
       const letters = (s.match(/[A-Za-z]/g) || []).length;
       if (!letters || digits > letters) return '';
-      // Filter obvious garbage and very short strings
-      if (s.length < 2) return '';
       return s;
     }
 
@@ -517,7 +614,10 @@
       });
       // Also parse inline bullet previews
       qa('.t-14.t-normal .display-flex.align-items-center span[aria-hidden="true"], .display-flex.full-width .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]', root)
-        .forEach((el) => splitSkillsInline(el.textContent).forEach((s) => { const n = cleanSkillName(s); if (n) skills.add(n); }));
+        .forEach((el) => splitSkillsInline(el.textContent).forEach((s) => {
+          const n = cleanSkillName(s);
+          if (n) skills.add(n);
+        }));
     };
 
     try {
@@ -559,7 +659,7 @@
             await scrollUntilLoaded(scrollHost, 60, 300);
             harvestList(modal);
             const close = q('button[aria-label*="Dismiss" i], button.artdeco-modal__dismiss, button[aria-label*="Close" i]', modal);
-            try { close && close.click(); } catch (e) { console.warn('skills modal close failed', e); }
+            try { close && (close instanceof HTMLElement) && close.click(); } catch {}
           }
         }
         if (!skills.size) harvestList(skillsSection);
@@ -580,7 +680,7 @@
             const root = topHdr ? topHdr.closest('section, div') || modal : modal;
             harvestList(root);
             const close = q('button[aria-label*="Dismiss" i], button.artdeco-modal__dismiss, button[aria-label*="Close" i]', modal);
-            try { close && close.click(); } catch (e) { console.warn('top skills modal close failed', e); }
+            try { close && (close instanceof HTMLElement) && close.click(); } catch {}
           }
         }
       }
@@ -690,7 +790,7 @@
             const root = topHdr ? topHdr.closest('section, div') || modal : modal;
             harvestList(root);
             const close = q('button[aria-label*="Dismiss" i], button.artdeco-modal__dismiss, button[aria-label*="Close" i]', modal);
-            try { close && close.click(); } catch (e) { console.warn('top skills modal close failed', e); }
+            try { close && (close instanceof HTMLElement) && close.click(); } catch {}
           }
         }
       }
@@ -715,8 +815,8 @@
     } catch (e) {
       console.warn('Top skills scrape failed:', e);
     }
-    // Only return up to 10 top skills to keep this focused
-    return Array.from(top).slice(0, 10);
+    // Only return up to 5 top skills to keep this focused
+    return Array.from(top).slice(0, 5);
   }
 
   async function scrapeAll(options) {
@@ -725,7 +825,7 @@
     await autoScroll();
 
     const profileUrl = getProfileUrl();
-    let basics = { name: '', headline: '', about: '', profilePic: '' };
+    let basics = { name: '', headline: '', about: '', profilePic: '', connectionDegree: '' };
     let experience = [];
     let education = [];
     let licenses = [];
@@ -742,13 +842,29 @@
       await autoScroll(8);
       try { basics = await scrapeBasics(); } catch {}
     }
+    // Ensure About using deep fallback if still empty
+    if (!basics.about) {
+      try { basics.about = await runWithStepTimeout('about-deep', () => fetchAboutFromProfile(profileUrl), 12000, ''); } catch {}
+    }
     sendPartial('basics', basics);
 
     // Lightweight sections (sync)
     progress('sections');
     try { experience = getExperience(); } catch (e) { console.warn('Exp failed', e); }
+    if (!experience || !experience.length) {
+      try { experience = await runWithStepTimeout('experience-deep', () => scrapeExperienceDeep(profileUrl), 15000, []); } catch {}
+    }
     try { education = getEducation(); } catch (e) { console.warn('Edu failed', e); }
+    if (!education || !education.length) {
+      try { education = await runWithStepTimeout('education-deep', () => scrapeEducationDeep(profileUrl), 15000, []); } catch {}
+    }
     try { licenses = getCertifications(); } catch (e) { console.warn('Licenses failed', e); }
+    if (!licenses || !licenses.length) {
+      try { licenses = await runWithStepTimeout('licenses-deep', () => scrapeLicensesDeep(profileUrl), 15000, []); } catch {}
+      if (!licenses || !licenses.length) {
+        try { licenses = await runWithStepTimeout('licenses-spa', () => scrapeLicensesSPA(profileUrl), 12000, []); } catch {}
+      }
+    }
     sendPartial('sections', { experience, education, licenses });
 
     // Heavy/async sections sequentially with per-step timeouts
@@ -773,19 +889,20 @@
     // Assemble result with deduped topSkills
     progress('assemble');
     const skillsSet = new Set(Array.isArray(skills) ? skills : []);
-    const topClean = Array.from(new Set(Array.isArray(topSkills) ? topSkills : [])).filter((s) => !skillsSet.has(s)).slice(0, 10);
+    const topClean = Array.from(new Set(Array.isArray(topSkills) ? topSkills : [])).filter((s) => !skillsSet.has(s)).slice(0, 5);
     return {
       profileUrl,
       name: basics.name,
       headline: basics.headline,
       about: basics.about,
       profilePic: basics.profilePic || '',
+      connectionDegree: basics.connectionDegree || '',
       experience,
       education,
       licenses,
       contactInfo,
       skills,
-      topSkills: topClean.length ? topClean : (Array.isArray(skills) ? skills.slice(0, 10) : []),
+      topSkills: topClean.length ? topClean : (Array.isArray(skills) ? skills.slice(0, 5) : []),
       scrapedAt: new Date().toISOString(),
       complete: true,
     };
@@ -821,7 +938,7 @@
           cards.forEach((card) => {
             const title = norm((card.querySelector('span[aria-hidden="true"], .mr1.t-bold span, .t-bold') || {}).textContent || '');
             const subtitle = norm((card.querySelector('.t-normal, .t-14.t-normal, .t-black--light, .display-flex span[aria-hidden="true"]') || {}).textContent || '');
-            const dates = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, .t-12.t-black--light') || {}).textContent || '');
+            const dates = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
             const description = norm((card.querySelector('.pv-entity__extra-details, .pvs-list__outer-container p, .inline-show-more-text') || {}).textContent || '');
             if (title || subtitle || dates || description) items.push({ title, subtitle, dates, description });
           });
@@ -851,6 +968,65 @@
   }
 
   // --- Lightweight DOM helpers per request ---
+  function getAboutSection() {
+    // Prefer explicit About containers; avoid global fallbacks that pull unrelated text
+    const aboutRoots = [
+      document.querySelector('section#about'),
+      Array.from(document.querySelectorAll('section')).find(sec => /\babout\b/i.test((sec.getAttribute('id') || ''))),
+      document.querySelector('[data-test-id="about"]'),
+      document.querySelector('section.pv-about-section'),
+    ].filter(Boolean);
+
+    for (const root of aboutRoots) {
+      try { expandWithin(root); } catch {}
+      // Try expanding a visible "See more" button inside About
+      try {
+        const btn = root.querySelector('button[aria-label*="see more" i], button[aria-label*="show more" i], .inline-show-more-text__button');
+        if (btn && (btn instanceof HTMLElement)) { btn.click(); }
+      } catch {}
+      const chunks = Array.from(root.querySelectorAll('p, .lt-line-clamp__line, .lt-line-clamp__raw-line, span[aria-hidden="true"]'))
+        .map(n => (n.innerText || n.textContent || '').trim())
+        .filter(Boolean);
+      const txt = cleanAboutText(chunks.join(' ').trim());
+      if (txt) return txt;
+    }
+    // Fallback: look for a heading "About" and take following sibling text
+    try {
+      const hdr = Array.from(document.querySelectorAll('h2, h3')).find(h => /\babout\b/i.test((h.textContent || '')));
+      if (hdr) {
+        const host = hdr.closest('section, div') || document;
+        const p = host.querySelector('p, .lt-line-clamp__raw-line, .lt-line-clamp__line');
+        const alt = cleanAboutText((p && (p.innerText || p.textContent) || '').trim());
+        if (alt) return alt;
+      }
+    } catch {}
+    return '';
+  }
+
+  async function fetchAboutFromProfile(profileUrl) {
+    try {
+      const base = (profileUrl || '').replace(/\?.*$/, '').replace(/#.*$/, '');
+      const res = await fetchWithTimeout(base, { credentials: 'include', timeout: 15000 });
+      if (!res.ok) return '';
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const aboutRoots = [
+        doc.querySelector('section#about'),
+        Array.from(doc.querySelectorAll('section')).find(sec => /\babout\b/i.test((sec.getAttribute('id') || ''))),
+        doc.querySelector('[data-test-id="about"]'),
+        doc.querySelector('section.pv-about-section'),
+      ].filter(Boolean);
+      for (const root of aboutRoots) {
+        const chunks = Array.from(root.querySelectorAll('p, .lt-line-clamp__line, .lt-line-clamp__raw-line, span[aria-hidden="true"]'))
+          .map(n => (n.innerText || n.textContent || '').trim())
+          .filter(Boolean);
+        const txt = cleanAboutText(chunks.join(' ').trim());
+        if (txt) return txt;
+      }
+    } catch {}
+    return '';
+  }
+
   function getTopSkills() {
     const seen = new Set();
     const out = [];
@@ -863,29 +1039,6 @@
       splitSkillsInline(el.textContent).forEach((s) => { if (!seen.has(s)) { seen.add(s); out.push(s); } });
     });
     return out;
-  }
-
-  function getAboutSection() {
-    // Prefer explicit about containers (from screenshots and variants)
-    const candidate = document.querySelector('section.pv-about-section, .pv-shared-text-with-see-more, [data-test-id="about"], section[id*="about" i], a[name="about"], #about');
-    if (candidate) {
-      // Try to expand see more buttons locally
-      try { expandWithin(candidate); } catch {}
-      let txt = (candidate.innerText || candidate.textContent || '').trim();
-      if (!txt) {
-        // Pull text from common nested spans seen in screenshot
-        const nested = Array.from(candidate.querySelectorAll('.white-space-pre, .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]'))
-          .map((n) => (n.innerText || n.textContent || '').trim())
-          .filter(Boolean)
-          .join('\n\n');
-        if (nested) txt = nested;
-      }
-      if (txt) return cleanAboutText(txt);
-    }
-    // Fallback to previously scraped basics if available later
-    const nodes = Array.from(document.querySelectorAll('.pv-about__summary-text, .lt-line-clamp__raw-line, .lt-line-clamp__line, section[id*="about" i] p, .white-space-pre, .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]'));
-    const parts = nodes.map((n) => (n.innerText || n.textContent || '').trim()).filter(Boolean);
-    return cleanAboutText(parts.join(' ').trim());
   }
 
   function cleanAboutText(txt) {
@@ -903,6 +1056,51 @@
       out.push(t);
     }
     return out.join(' ');
+  }
+
+  function collapseDupSegments(s) {
+    s = norm(s);
+    if (!s) return s;
+    // Remove exact double concatenation (e.g., "ABCABC")
+    const mid = Math.floor(s.length / 2);
+    if (s.length % 2 === 0 && s.slice(0, mid) === s.slice(mid)) return s.slice(0, mid).trim();
+    // Split by common separators and remove adjacent duplicates
+    const seps = [' · ', ' | ', ' – ', ' - '];
+    for (const sep of seps) {
+      if (s.includes(sep)) {
+        const parts = s.split(sep).map(p => norm(p)).filter(Boolean);
+        const out = [];
+        for (const p of parts) if (out[out.length - 1] !== p) out.push(p);
+        return out.join(sep);
+      }
+    }
+    return s;
+  }
+
+  const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+  function findEmails(str) {
+    const set = new Set();
+    (str.match(EMAIL_RE) || []).forEach(e => set.add(e.toLowerCase()));
+    return Array.from(set);
+  }
+
+  const PHONE_CANDIDATE_RE = /(?:(?:\+\d{1,3}[\s-]?)?(?:\(?\d{2,4}\)?[\s-]?)?\d[\d\s\-()]{8,})/g;
+  function sanitizePhone(p) {
+    const digits = (p.match(/\d/g) || []).join('');
+    if (digits.length < 10 || digits.length > 15) return '';
+    // Reject if the string clearly looks like a date range near years
+    if (/\b(19|20)\d{2}\b.*?-.*?\b(19|20)\d{2}\b/.test(p)) return '';
+    // Normalize: keep leading + and digits
+    const plus = p.trim().startsWith('+') ? '+' : '';
+    return plus + digits;
+  }
+  function findPhones(str) {
+    const set = new Set();
+    (str.match(PHONE_CANDIDATE_RE) || []).forEach(raw => {
+      const s = sanitizePhone(raw);
+      if (s) set.add(s);
+    });
+    return Array.from(set);
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -938,36 +1136,56 @@
       return true;
     }
   });
-})();
 
-// Allow controlled SPA navigation for deep sections (skills/contact/licenses)
-const ALLOW_SPA_NAV = true;
+  const ALLOW_SPA_NAV = true;
 
-// Port-based long-lived messaging for robust large-profile scraping
-try {
-  chrome.runtime.onConnect.addListener((port) => {
-    if (!port || port.name !== 'scrape-port') return;
-    let aborted = false;
+  // Port-based long-lived messaging for robust large-profile scraping (inside IIFE so it can use helpers)
+  try {
+    chrome.runtime.onConnect.addListener((port) => {
+      if (!port || port.name !== 'scrape-port') return;
+      let aborted = false;
 
-    const safePost = (msg) => { try { port.postMessage(msg); } catch {} };
+      const safePost = (msg) => { try { port.postMessage(msg); } catch {} };
 
-    port.onDisconnect.addListener(() => { aborted = true; });
+      port.onDisconnect.addListener(() => { aborted = true; });
 
-    port.onMessage.addListener(async (msg) => {
-      if (!msg || msg.type !== 'START_SCRAPE') return;
-      const options = msg.options || {};
-      safePost({ type: 'PROGRESS', step: 'init', detail: 'starting' });
-      try {
-        const data = await withOverallTimeout(scrapeAll(options), 170000);
-        if (aborted) return;
-        // stream final and also a partial for cache recovery
-        safePost({ type: 'PROGRESS', step: 'done', detail: 'complete', partialKey: 'lastScrape', partialData: data });
-        safePost({ type: 'RESULT', ok: true, data });
-        setTimeout(() => { try { port.disconnect(); } catch {} }, 300);
-      } catch (e) {
-        if (aborted) return;
-        safePost({ type: 'ERROR', error: e && e.message ? e.message : String(e) });
-      }
+      port.onMessage.addListener(async (msg) => {
+        if (!msg || msg.type !== 'START_SCRAPE') return;
+        const options = msg.options || {};
+        safePost({ type: 'PROGRESS', step: 'init', detail: 'starting' });
+        try {
+          const wot = (typeof withOverallTimeout === 'function') ? withOverallTimeout : function(promise, timeoutMs){
+            return new Promise((resolve, reject) => {
+              let done = false;
+              const timer = setTimeout(() => {
+                if (done) return; done = true;
+                reject(new Error(`Scrape operation timed out after ${Math.round(timeoutMs/1000)}s`));
+              }, timeoutMs);
+
+              Promise.resolve(promise).then((res) => {
+                if (done) return; done = true; clearTimeout(timer); resolve(res);
+              }).catch((err) => {
+                if (done) return; done = true; clearTimeout(timer); reject(err);
+              });
+            });
+          };
+          const data = await wot(scrapeAll(options), 170000);
+          if (aborted) return;
+          try {
+            chrome.storage.session.set({ lastScrape: data }, () => {
+              if (chrome.runtime.lastError) {
+                chrome.storage.local.set({ lastScrape: data }, () => {});
+              }
+            });
+          } catch {}
+          safePost({ type: 'PROGRESS', step: 'done', detail: 'complete', partialKey: 'lastScrape', partialData: data });
+          safePost({ type: 'RESULT', ok: true, data });
+          setTimeout(() => { try { port.disconnect(); } catch {} }, 300);
+        } catch (e) {
+          if (aborted) return;
+          safePost({ type: 'ERROR', error: e && e.message ? e.message : String(e) });
+        }
+      });
     });
-  });
-} catch (e) { /* onConnect not available in some test harnesses */ }
+  } catch {}
+})();
