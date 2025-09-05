@@ -617,17 +617,13 @@
     // Profile picture (safe selectors with fallbacks)
     let profilePic = '';
     try {
-      // Prefer explicit avatar nodes to avoid picking random media/images
-      const picSel = [
-        'img.pv-top-card-profile-picture__image',
-        'img.pv-top-card-profile-picture__image--show',
-        'img[data-test-id="hero-summary-card-profile-image"]',
-        'img[alt*="profile" i][src*="media"], img[alt*="Profile" i][src*="media"]',
-      ];
-      for (const sel of picSel) {
-        const node = q(sel);
-        const src = node ? (node.currentSrc || node.src || node.getAttribute('data-delayed-url') || '') : '';
-        if (src && /^https?:\/\//i.test(src)) { profilePic = src; break; }
+      let img = q('img.pv-top-card-profile-picture__image, .pv-top-card-profile-picture__container img, img[alt*="profile" i]');
+      if (!img) img = q('img[alt*="Profile" i], img[alt*="profile photo" i], .ember-view img');
+      profilePic = (img && (img.currentSrc || img.src)) ? (img.currentSrc || img.src) : '';
+      if (!profilePic) {
+        const og = q('meta[property="og:image"]');
+        const ogUrl = og && og.getAttribute('content');
+        if (ogUrl && /^https?:\/\//i.test(ogUrl)) profilePic = ogUrl;
       }
     } catch {}
 
@@ -730,7 +726,7 @@
       // sanitize websites: only http(s). For linkedin.com, only keep this profile's own /in/<slug> URL.
       let profileSlug = '';
       try {
-        const m2 = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/([^/]+)\//);
+        const m2 = (location.href || '').match(/\/in\/([^/]+)\/?/i);
         if (m2 && m2[1]) profileSlug = m2[1].toLowerCase();
       } catch {}
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
@@ -747,6 +743,60 @@
       return data;
     } catch (e) {
       console.warn('Contact info scrape failed', e);
+      return null;
+    }
+  }
+
+  async function scrapeContactInfoFast(includeContact) {
+    if (!includeContact) return null;
+    try {
+      const data = { websites: [], emails: [], phones: [] };
+      const pushEmail = (s) => { if (s) data.emails.push(s.trim()); };
+      const pushPhone = (s) => { if (s) data.phones.push(s.replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-')); };
+      const pushSite = (s) => { if (s) data.websites.push(s.trim()); };
+
+      const harvestFromRoot = (root) => {
+        const scope = root || document;
+        // Emails
+        try {
+          const emailNodes = qa('a[href^="mailto:"], a[href*="@"], span, div, p', scope).slice(0, 600);
+          emailNodes.forEach((el) => {
+            const t = (el.innerText || el.textContent || '').trim();
+            findEmails(t).forEach(pushEmail);
+          });
+        } catch {}
+        // Phones
+        try {
+          const phoneNodes = qa('a[href^="tel:"], span, div, p', scope).slice(0, 600);
+          phoneNodes.forEach((el) => {
+            const t = (el.innerText || el.textContent || '').trim();
+            (t.match(PHONE_CANDIDATE_RE) || []).forEach(pushPhone);
+          });
+        } catch {}
+        // Websites
+        try {
+          qa('a[href^="http" i]', scope).forEach((a) => pushSite(a.getAttribute('href') || ''));
+        } catch {}
+      };
+
+      const roots = [ q('.pv-top-card'), q('[data-test-id="hero-summary-card"]'), q('main') ].filter(Boolean);
+      roots.forEach(r => harvestFromRoot(r));
+
+      const uniq = (arr) => Array.from(new Set((arr || []).map((s) => (s || '').trim()).filter(Boolean)));
+      data.emails = uniq(data.emails).filter((e) => /@/.test(e));
+      data.phones = uniq(data.phones).map((p) => p.replace(/[^+\d\-()\s]/g, '').replace(/\s+/g, ' ').trim());
+      let profileSlug = '';
+      try { const m = (location.href || '').match(/\/in\/([^/]+)\/?/i); if (m && m[1]) profileSlug = m[1].toLowerCase(); } catch {}
+      data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
+        try {
+          const { hostname, pathname } = new URL(u);
+          if (/linkedin\.com$/i.test(hostname)) { return profileSlug ? (/\/in\//i.test(pathname) && pathname.toLowerCase().includes(profileSlug)) : false; }
+          return true;
+        } catch { return false; }
+      });
+      return data;
+    } catch (e) {
+      console.warn('Contact fast scrape failed', e);
       return null;
     }
   }
@@ -1234,6 +1284,17 @@
     return v;
   }
 
+  function isPhoneLikely(raw) {
+    const s = (raw || '').toString().trim();
+    if (!s) return false;
+    if (/\b(19|20)\d{2}\s*[-–—]\s*(19|20)\d{2}\b/.test(s)) return false; // looks like a year range
+    const digits = (s.match(/\d/g) || []).length;
+    if (digits < 7 || digits > 15) return false;
+    // reject if mostly non-phone punctuation
+    if (/^(\d{1,4}[\s-]?){1,5}\d{2,4}$/.test(s)) return true; // simple grouped digits
+    return /\d[\d\s()+-]{5,}\d/.test(s);
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'PING') { sendResponse({ type: 'PONG' }); return; }
     if (msg && msg.type === 'DO_SCRAPE') {
@@ -1349,23 +1410,18 @@
       const plausibleSkill = (v) => {
         let s = (v || '').replace(/\s+/g, ' ').trim();
         if (!s || s.length < 2) return '';
-        // Obvious noise
         if (/\b\+\d+\s*skills\b/i.test(s)) return '';
         if (/\b\d+\s+experiences?\b/i.test(s)) return '';
-        // Drop cert/meta/geo/sentence-like
-        if (CERT_WORD_RE.test(s)) return '';
-        if (META_WORD_RE.test(s)) return '';
-        if (GEO_RE.test(s)) return '';
+        if (CERT_WORD_RE.test(s) || META_WORD_RE.test(s) || GEO_RE.test(s)) return '';
+        if (/^[()]/.test(s)) return '';
         if (SENTENCE_TOKEN_RE.test(s) && s.length > 20) return '';
-        // Word-count and length bounds
         const words = s.split(/\s+/).filter(Boolean);
         if (words.length > 3) return '';
         if (s.length > 35) return '';
-        // Character balance
         const digits = (s.match(/\d/g) || []).length;
         const letters = (s.match(/[A-Za-z]/g) || []).length;
         if (!letters || digits > letters) return '';
-        // Avoid generic labels only
+        if (!/^[A-Za-z][A-Za-z0-9.+#\- ]*$/.test(s)) return '';
         if (/^(skills?|top|other|more)$/i.test(s)) return '';
         return s;
       };
@@ -1377,20 +1433,191 @@
           if (skill) set.add(skill);
         });
       }
-
-      // Strict inline-bullets fallback if section yields <5
-      if (set.size < 5) {
-        try {
-          const bullets = qa('.t-14.t-normal .display-flex.align-items-center span[aria-hidden="true"], .display-flex.full-width .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"], .pv-top-card .inline-show-more-text span[aria-hidden="true"]');
-          bullets.forEach((el) => {
-            splitSkillsInline(el.textContent).forEach((s) => {
-              const cleaned = plausibleSkill(s);
-              if (cleaned) set.add(cleaned);
-            });
-          });
-        } catch {}
-      }
     } catch {}
     return Array.from(set).slice(0, 5);
+  }
+
+  async function scrapeContactInfoFast(includeContact) {
+    if (!includeContact) return null;
+    try {
+      const data = { websites: [], emails: [], phones: [] };
+
+      const pushEmail = (s) => { if (s) data.emails.push(s.trim()); };
+      const pushPhone = (s) => { if (s) data.phones.push(s.replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-')); };
+      const pushSite = (s) => { if (s) data.websites.push(s.trim()); };
+
+      const harvestFromRoot = (root) => {
+        const scope = root || document;
+        // Emails
+        try {
+          const emailNodes = qa('a[href^="mailto:"], a[href*="@"], span, div, p', scope).slice(0, 600);
+          emailNodes.forEach((el) => {
+            const t = (el.innerText || el.textContent || '').trim();
+            findEmails(t).forEach(pushEmail);
+          });
+        } catch {}
+        // Phones
+        try {
+          const phoneNodes = qa('a[href^="tel:"], span, div, p', scope).slice(0, 600);
+          phoneNodes.forEach((el) => {
+            const t = (el.innerText || el.textContent || '').trim();
+            (t.match(PHONE_CANDIDATE_RE) || []).forEach(pushPhone);
+          });
+        } catch {}
+        // Websites
+        try {
+          qa('a[href^="http" i]', scope).forEach((a) => pushSite(a.getAttribute('href') || ''));
+        } catch {}
+      };
+
+      const roots = [ q('.pv-top-card'), q('[data-test-id="hero-summary-card"]'), q('main') ].filter(Boolean);
+      roots.forEach(r => harvestFromRoot(r));
+
+      const uniq = (arr) => Array.from(new Set((arr || []).map((s) => (s || '').trim()).filter(Boolean)));
+      data.emails = uniq(data.emails).filter((e) => /@/.test(e));
+      data.phones = uniq(data.phones).map((p) => p.replace(/[^+\d\-()\s]/g, '').replace(/\s+/g, ' ').trim());
+      let profileSlug = '';
+      try { const m = (location.href || '').match(/\/in\/([^/]+)\/?/i); if (m && m[1]) profileSlug = m[1].toLowerCase(); } catch {}
+      data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
+        try {
+          const { hostname, pathname } = new URL(u);
+          if (/linkedin\.com$/i.test(hostname)) { return profileSlug ? (/\/in\//i.test(pathname) && pathname.toLowerCase().includes(profileSlug)) : false; }
+          return true;
+        } catch { return false; }
+      });
+      return data;
+    } catch (e) {
+      console.warn('Contact fast scrape failed', e);
+      return null;
+    }
+  }
+
+  // Try to locate the Skills section robustly without navigation
+  function findSkillsSection() {
+    try {
+      const sections = qa('section');
+      // 1) Heading text contains "Skills"
+      for (const sec of sections) {
+        const h = q('h2, h3', sec);
+        if (h && /\bskills\b/i.test(h.textContent || '')) return sec;
+      }
+      // 2) Section that contains a link to /details/skills/
+      for (const sec of sections) {
+        const a = q('a[href*="/details/skills/"]', sec) || q('a[data-test-app-aware-link][href*="/details/skills/"]', sec);
+        if (a) return sec;
+      }
+      // 3) Section that has a footer with text like "Show all XX skills"
+      for (const sec of sections) {
+        const footer = q('.pvs-list__footer-wrapper, .pvs-pagination__container', sec);
+        const txt = footer ? (footer.textContent || '') : '';
+        if (/\bskills\b/i.test(txt)) return sec;
+      }
+    } catch {}
+    return null;
+  }
+
+  // Fast skills: in-page only, no clicks, no waits; cap to 5
+  async function scrapeSkillsFast() {
+    const set = new Set();
+    try {
+      // Visible skill rows (Skills section only)
+      const skillsSection = findSkillsSection();
+
+      const CERT_WORD_RE = /(certified|certification|certificate|rhcsa|aws\s+certified|oracle\s+certified|microsoft\s+certified|foundation\s+certificate)/i;
+      const META_WORD_RE = /(issuer|issued|university|college|institute|academy|location|based\s+in|currently)/i;
+      const GEO_RE = /(jaipur|kota|india|delhi|mumbai|bangalore|bengaluru|pune|gurgaon|noida|hyderabad)/i;
+      const SENTENCE_TOKEN_RE = /(\.|,|;|:\s|\bi\b|\bmy\b|\bi'm\b|\bi am\b|\bwith\b|\band\b|\bthat\b|\bwhich\b)/i;
+
+      const plausibleSkill = (v) => {
+        let s = (v || '').replace(/\s+/g, ' ').trim();
+        if (!s || s.length < 2) return '';
+        if (/\b\+\d+\s*skills\b/i.test(s)) return '';
+        if (/\b\d+\s+experiences?\b/i.test(s)) return '';
+        if (CERT_WORD_RE.test(s) || META_WORD_RE.test(s) || GEO_RE.test(s)) return '';
+        if (/^[()]/.test(s)) return '';
+        if (SENTENCE_TOKEN_RE.test(s) && s.length > 20) return '';
+        const words = s.split(/\s+/).filter(Boolean);
+        if (words.length > 3) return '';
+        if (s.length > 35) return '';
+        const digits = (s.match(/\d/g) || []).length;
+        const letters = (s.match(/[A-Za-z]/g) || []).length;
+        if (!letters || digits > letters) return '';
+        if (!/^[A-Za-z][A-Za-z0-9.+#\- ]*$/.test(s)) return '';
+        if (/^(skills?|top|other|more)$/i.test(s)) return '';
+        return s;
+      };
+
+      if (skillsSection) {
+        qa('li, .pvs-list__paged-list-item, .artdeco-list__item, .pvs-list__item', skillsSection).forEach((li) => {
+          const raw = (
+            q('span[aria-hidden="true"]', li)?.textContent ||
+            q('.mr1.t-bold span[aria-hidden="true"]', li)?.textContent ||
+            q('.t-bold span[aria-hidden="true"]', li)?.textContent ||
+            q('.display-flex.align-items-center span[aria-hidden="true"]', li)?.textContent ||
+            ''
+          ).replace(/\s+/g, ' ').trim();
+          const skill = plausibleSkill(raw);
+          if (skill) set.add(skill);
+        });
+      }
+
+      // No inline-bullets fallback: if section not found or empty, return [] per client rule
+    } catch {}
+    return Array.from(set).slice(0, 5);
+  }
+
+  async function scrapeContactInfoFast(includeContact) {
+    if (!includeContact) return null;
+    try {
+      const data = { websites: [], emails: [], phones: [] };
+
+      const pushEmail = (s) => { if (s) data.emails.push(s.trim()); };
+      const pushPhone = (s) => { if (s) data.phones.push(s.replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-')); };
+      const pushSite = (s) => { if (s) data.websites.push(s.trim()); };
+
+      const harvestFromRoot = (root) => {
+        const scope = root || document;
+        // Emails
+        try {
+          const emailNodes = qa('a[href^="mailto:"], a[href*="@"], span, div, p', scope).slice(0, 600);
+          emailNodes.forEach((el) => {
+            const t = (el.innerText || el.textContent || '').trim();
+            findEmails(t).forEach(pushEmail);
+          });
+        } catch {}
+        // Phones
+        try {
+          const phoneNodes = qa('a[href^="tel:"], span, div, p', scope).slice(0, 600);
+          phoneNodes.forEach((el) => {
+            const t = (el.innerText || el.textContent || '').trim();
+            (t.match(PHONE_CANDIDATE_RE) || []).forEach(pushPhone);
+          });
+        } catch {}
+        // Websites
+        try {
+          qa('a[href^="http" i]', scope).forEach((a) => pushSite(a.getAttribute('href') || ''));
+        } catch {}
+      };
+
+      const roots = [ q('.pv-top-card'), q('[data-test-id="hero-summary-card"]'), q('main') ].filter(Boolean);
+      roots.forEach(r => harvestFromRoot(r));
+
+      const uniq = (arr) => Array.from(new Set((arr || []).map((s) => (s || '').trim()).filter(Boolean)));
+      data.emails = uniq(data.emails).filter((e) => /@/.test(e));
+      data.phones = uniq(data.phones).map((p) => p.replace(/[^+\d\-()\s]/g, '').replace(/\s+/g, ' ').trim());
+      let profileSlug = '';
+      try { const m = (location.href || '').match(/\/in\/([^/]+)\/?/i); if (m && m[1]) profileSlug = m[1].toLowerCase(); } catch {}
+      data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
+        try {
+          const { hostname, pathname } = new URL(u);
+          if (/linkedin\.com$/i.test(hostname)) { return profileSlug ? (/\/in\//i.test(pathname) && pathname.toLowerCase().includes(profileSlug)) : false; }
+          return true;
+        } catch { return false; }
+      });
+      return data;
+    } catch (e) {
+      console.warn('Contact fast scrape failed', e);
+      return null;
+    }
   }
 })();

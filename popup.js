@@ -62,28 +62,26 @@ function renderProfile(data) {
   const lc = $('certifications');
 
   if (pic) pic.src = data.profilePic || '';
-  if (nm) nm.textContent = data.name || '—';
+  if (nm) nm.textContent = data.name || '';
   // headline suppressed
-  // if (hl) hl.textContent = data.headline || '—';
+  // if (hl) hl.textContent = data.headline || '';
   if (url) {
     url.textContent = '';
     url.onclick = null;
   }
 
-  // Contact Info: show ONLY Emails and Phones
+  // Contact Info: show ONLY Emails and LinkedIn URL
   if (ci) {
     const emails = Array.isArray(data?.contactInfo?.emails) ? data.contactInfo.emails.filter(Boolean) : [];
-    const phones = Array.isArray(data?.contactInfo?.phones) ? data.contactInfo.phones.filter(Boolean) : [];
     const rows = [];
     if (data.profileUrl) rows.push(`<div>• LinkedIn: <a href="${data.profileUrl}" target="_blank" rel="noopener noreferrer">${data.profileUrl}</a></div>`);
     if (emails.length) rows.push(`<div>• Email: ${emails.join(', ')}</div>`);
-    if (phones.length) rows.push(`<div>• Phone: ${phones.join(', ')}</div>`);
     ci.innerHTML = rows.join('');
-    if (!emails.length && !phones.length && !data.profileUrl) ci.textContent = '—';
+    if (!emails.length && !data.profileUrl) ci.textContent = '';
   }
 
   // Summary: About only (no headline fallback here)
-  if (sm) sm.textContent = (data.about && data.about.trim()) ? data.about : '—';
+  if (sm) sm.textContent = (data.about && data.about.trim()) ? data.about : '';
 
   // Sanitize helpers for labels
   const collapseDupSegments = (s) => {
@@ -122,7 +120,7 @@ function renderProfile(data) {
     // Cap to 5 skills max per client
     const shown = allSkills.slice(0, 5);
     sk.innerHTML = shown.map(s => `<span class="chip">${s}</span>`).join(' ');
-    if (!shown.length) sk.textContent = '—';
+    if (!shown.length) sk.textContent = '';
   }
 
   if (ex) {
@@ -137,7 +135,7 @@ function renderProfile(data) {
         dr ? `<strong>Dates:</strong> ${dr}` : ''
       ].filter(Boolean).join(' · ');
     }).join('<br/>');
-    if (!arr.length) ex.textContent = '—';
+    if (!arr.length) ex.textContent = '';
   }
 
   if (ed) {
@@ -152,7 +150,7 @@ function renderProfile(data) {
         dr ? `<strong>Dates:</strong> ${dr}` : ''
       ].filter(Boolean).join(' · ');
     }).join('<br/>');
-    if (!arr.length) ed.textContent = '—';
+    if (!arr.length) ed.textContent = '';
   }
 
   if (lc) {
@@ -167,7 +165,7 @@ function renderProfile(data) {
         dt ? `<strong>Date:</strong> ${dt}` : ''
       ].filter(Boolean).join(' · ');
     }).join('<br/>');
-    if (!arr.length) lc.textContent = '—';
+    if (!arr.length) lc.textContent = '';
   }
 }
 
