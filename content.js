@@ -42,7 +42,7 @@
   }
 
   // Run a specific step with its own timeout so one slow step doesn't kill the whole scrape
-  async function runWithStepTimeout(stepName, fn, ms = 15000, fallbackValue = null) {
+  async function runWithStepTimeout(stepName, fn, ms = 8000, fallbackValue = null) {
     progress(stepName + ':start');
     try {
       const res = await Promise.race([
@@ -60,7 +60,7 @@
 
   // Fetch with timeout to prevent hanging requests
   async function fetchWithTimeout(url, opts = {}) {
-    const { timeout = 20000, ...rest } = opts || {};
+    const { timeout = 12000, ...rest } = opts || {};
     let t;
     const guard = new Promise((_, rej) => { t = setTimeout(() => rej(new Error('fetch-timeout: ' + url)), timeout); });
     try {
@@ -92,17 +92,17 @@
     return '';
   }
 
-  async function autoScroll(maxSteps = 24) {
+  async function autoScroll(maxSteps = 6) {
     let last = 0;
     for (let i = 0; i < maxSteps; i++) {
       window.scrollTo(0, document.body.scrollHeight);
-      await sleep(400);
+      await sleep(150);
       const cur = document.body.scrollHeight;
       if (cur === last) break;
       last = cur;
     }
     window.scrollTo(0, 0);
-    await sleep(300);
+    await sleep(120);
   }
 
   async function expandWithin(root) {
@@ -192,7 +192,7 @@
           const data = JSON.parse(ld.textContent || '{}');
           if (data && typeof data === 'object') {
             if (!name && data.name) name = data.name;
-            if (!headline && data.headline) headline = data.headline;
+            // headline intentionally ignored
           }
         } catch {}
       }
@@ -231,7 +231,7 @@
           const cards = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
           for (const card of cards) {
             const title = norm(text(q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', card)));
-            const subtitle = norm(text(q('.t-normal, .t-14.t-normal, .t-black--light, .display-flex span[aria-hidden="true"]', card)));
+            const subtitle = norm(text(q('.t-14.t-normal, .t-14.t-normal.t-black, .t-black--light, .display-flex span[aria-hidden="true"]', card)));
             const dates = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', card)));
             const description = norm(text(q('.pv-entity__extra-details, .pvs-list__outer-container p, .inline-show-more-text', card)));
             // Drop entries that look like bare filenames (e.g., image attachments like whatever.png)
@@ -271,14 +271,23 @@
         for (const li of items) {
           let company = norm(text(q('.t-14.t-normal.t-black, .pv-entity__secondary-title, .align-self-center span.t-14.t-normal', li)));
           let title = norm(text(q('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], span[aria-hidden="true"], .mr1.t-bold', li)));
-          let dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, .pvs-entity__caption span, time', li)));
+          let dateRange = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
 
-          // Clean noise: drop skill aggregates and comma-joined skill lines
-          const noisy = /\b\+\d+\s+skills\b/i.test(title) || /\b\+\d+\s+skills\b/i.test(company) || /\bskills\b/i.test(company);
+          // Clean noise: drop skill aggregates and obvious non-job snippets
+          const noisy = /\b\+\d+\s*skills\b/i.test(title) || /\b\+\d+\s*skills\b/i.test(company) || /\bskills\b/i.test(company);
           if (noisy) { company = ''; title = ''; }
-          // Drop entries that are clearly not jobs
-          if (!company && /\b(\+\d+ skills|User Journeys|Wireframing)\b/i.test(title)) title = '';
-          // Reject if both company and title look empty or too generic
+          company = cleanEntityField(company);
+          title = cleanEntityField(title);
+          // Require a valid date to prevent people/skills bleeding into Experience
+          if (!dateRange || !/(\d{4}|present)/i.test(dateRange)) { continue; }
+          // Skip if what we captured is actually a generic skill label
+          if (GENERIC_SKILL_RE.test(company) || GENERIC_SKILL_RE.test(title)) continue;
+          if (company && title && company.toLowerCase() === title.toLowerCase() && !ORG_HINT_RE.test(company)) continue;
+          if (!(ORG_HINT_RE.test(company) || ORG_HINT_RE.test(title))) {
+            const len = (company + ' ' + title).trim().length;
+            if (len < 8) continue;
+          }
+
           if (!(company || title || dateRange)) continue;
           company = collapseDupSegments(company);
           title = collapseDupSegments(title);
@@ -293,8 +302,9 @@
 
   // Deep fallback: fetch Experience details page
   async function scrapeExperienceDeep(profileUrl) {
+    // Disabled deep experience fetch for speed
     try {
-      const base = (profileUrl || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
+      const base = (profileUrl || '').replace(/\/recent-activity.*$/, '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
       const rootUrl = base ? base[0] : '';
       const url = rootUrl ? rootUrl + 'details/experience/' : '';
       const items = [];
@@ -304,19 +314,70 @@
         if (res.ok) {
           const html = await res.text();
           const doc = new DOMParser().parseFromString(html, 'text/html');
-          const cards = doc.querySelectorAll('li, .pvs-list__paged-list-item, .artdeco-list__item');
+          const root = doc.querySelector('main') || doc;
+          const cards = root.querySelectorAll('li, .pvs-list__paged-list-item, .artdeco-list__item');
+          // disabled parsing
           cards.forEach((card) => {
-            const title = norm((card.querySelector('span[aria-hidden="true"], .mr1.t-bold span, .t-bold') || {}).textContent || '');
-            let company = norm((card.querySelector('.t-14.t-normal.t-black, .t-14.t-normal, .align-self-center span.t-14.t-normal') || {}).textContent || '');
+            const titleRaw = (card.querySelector('span[aria-hidden="true"], .mr1.t-bold span, .t-bold') || {}).textContent || '';
+            const companyRaw = (card.querySelector('.t-14.t-normal.t-black, .t-14.t-normal, .align-self-center span.t-14.t-normal') || {}).textContent || '';
+            let title = cleanEntityField(norm(titleRaw));
+            let company = cleanEntityField(norm(companyRaw));
             if (!company) {
               const alt = card.querySelector('.display-flex span[aria-hidden="true"]');
-              if (alt) company = norm(alt.textContent || '');
+              if (alt) company = cleanEntityField(norm(alt.textContent || ''));
             }
-            const dateRange = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
+            let dateRange = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
+            // Require valid dates for Experience entries
+            if (!dateRange || !/(\d{4}|present)/i.test(dateRange)) return;
+            if (GENERIC_SKILL_RE.test(company) || GENERIC_SKILL_RE.test(title)) return;
+            if (company && title && company.toLowerCase() === title.toLowerCase() && !ORG_HINT_RE.test(company)) return;
+            if (!(ORG_HINT_RE.test(company) || ORG_HINT_RE.test(title))) {
+              const len = (company + ' ' + title).trim().length;
+              if (len < 8) return;
+            }
             if (title || company || dateRange) items.push({ company, title, dateRange });
           });
         }
       } catch {}
+      return items;
+    } catch { return []; }
+  }
+
+  // Quick SPA fallback: temporarily navigate to details/experience/ and harvest
+  async function scrapeExperienceSPA(profileUrl) {
+    // SPA nav disabled for speed
+    if (!ALLOW_SPA_NAV) return [];
+    try {
+      const m = (profileUrl || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
+      const base = m ? m[0] : '';
+      const detailsUrl = base ? base + 'details/experience/' : '';
+      if (!detailsUrl) return [];
+      const orig = location.href;
+      try {
+        history.pushState({}, '', detailsUrl);
+      } catch {}
+      await waitForSelector('main, .pvs-list__container', 6000);
+      await scrollUntilLoaded(document.scrollingElement || document.documentElement, 40, 220);
+      const items = [];
+      const cards = document.querySelectorAll('li, .pvs-list__paged-list-item, .artdeco-list__item');
+      cards.forEach((card) => {
+        const title = cleanEntityField(norm((card.querySelector('span[aria-hidden="true"], .mr1.t-bold span, .t-bold') || {}).textContent || ''));
+        let company = cleanEntityField(norm((card.querySelector('.t-14.t-normal.t-black, .t-14.t-normal, .align-self-center span.t-14.t-normal') || {}).textContent || ''));
+        if (!company) {
+          const alt = card.querySelector('.display-flex span[aria-hidden="true"]');
+          if (alt) company = cleanEntityField(norm(alt.textContent || ''));
+        }
+        let dateRange = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
+        if (!dateRange || !/(\d{4}|present)/i.test(dateRange)) return;
+        if (GENERIC_SKILL_RE.test(company) || GENERIC_SKILL_RE.test(title)) return;
+        if (company && title && company.toLowerCase() === title.toLowerCase() && !ORG_HINT_RE.test(company)) return;
+        if (!(ORG_HINT_RE.test(company) || ORG_HINT_RE.test(title))) {
+          const len = (company + ' ' + title).trim().length;
+          if (len < 8) return;
+        }
+        if (title || company || dateRange) items.push({ company, title, dateRange });
+      });
+      try { history.pushState({}, '', orig); } catch {}
       return items;
     } catch { return []; }
   }
@@ -369,11 +430,13 @@
             degree = `${degree}, ${field}`;
           }
 
-          // Move obvious program line to degree if mis-captured as school
-          if (/\bExecutive Program\b/i.test(school) && !DEGREE_PAT.test(degree)) { degree = degree ? degree : school; school = ''; }
-
-          // Final cleanup
-          degree = (degree || '').replace(SKILL_NOISE, '').trim();
+          // Final cleanup and noise filtering
+          degree = cleanEntityField((degree || '').replace(SKILL_NOISE, '').trim());
+          school = cleanEntityField(school);
+          // Require a valid date to prevent skills/people lists from leaking into Education
+          if (!dateRange || !/(\d{4}|present)/i.test(dateRange)) { continue; }
+          if (GENERIC_SKILL_RE.test(school) || GENERIC_SKILL_RE.test(degree)) { continue; }
+          if (!(EDU_HINT_RE.test(school) || EDU_HINT_RE.test(degree))) continue;
           school = collapseDupSegments(school);
           degree = collapseDupSegments(degree);
           dateRange = collapseDupSegments(dateRange);
@@ -385,6 +448,119 @@
     return out;
   }
 
+  // Deep fallback: fetch Education details page
+  async function scrapeEducationDeep(profileUrl) {
+    // Disabled deep education fetch for speed
+    try {
+      const base = (profileUrl || '').replace(/\?.*$/, '').replace(/#.*$/, '');
+      const rootUrl = base ? base : '';
+      const url = rootUrl ? rootUrl + 'details/education/' : '';
+      const items = [];
+      if (!url) return items;
+      try {
+        const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 15000 });
+        if (res.ok) {
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const root = doc.querySelector('main') || doc;
+          const cards = root.querySelectorAll('li, .pvs-list__paged-list-item, .artdeco-list__item');
+          // disabled parsing
+          cards.forEach((card) => {
+            // School (bold line)
+            let school = cleanEntityField(norm((card.querySelector('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], .mr1.t-bold, .entity-result__primary-subtitle') || {}).textContent || ''));
+            if (/\.(png|jpg|jpeg)$/i.test(school)) school = '';
+            // Date range
+            let dateRange = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
+            // Degree heuristics from secondary lines
+            const secTexts = Array.from(card.querySelectorAll('.t-14.t-normal, .t-14.t-normal.t-black, .t-black--light, .pvs-entity__subtitle, .pv-entity__degree-name, .pv-entity__fos, .inline-show-more-text, span[aria-hidden="true"]'))
+              .map(e => (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim())
+              .filter(Boolean);
+            const DEGREE_PAT = /(b\.?\s?tech|btech|b\.?e\.?|bachelor|m\.?\s?tech|mtech|m\.?e\.?|master|mba|pgdm|diploma|ph\.?d\.?|doctorate|executive\s+program)/i;
+            const SKILL_NOISE = /\b\+\d+\s*skills\b|\bRead more\b/i;
+            let degreeParts = [];
+            for (const t of secTexts) {
+              if (SKILL_NOISE.test(t)) continue;
+              if (DEGREE_PAT.test(t)) degreeParts.push(t);
+            }
+            degreeParts = degreeParts.sort((a,b) => a.length - b.length);
+            let degree = degreeParts[0] || '';
+            // Field of study
+            let field = '';
+            if (!/computer|information|electrical|mechanical|civil|science|engineering|technology|management/i.test(degree)) {
+              const candidate = secTexts.find(t => /computer|information|electrical|mechanical|civil|science|engineering|technology|management/i.test(t));
+              if (candidate && candidate.length < 80) field = candidate;
+            }
+            if (field && degree && !new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(degree)) {
+              degree = `${degree}, ${field}`;
+            }
+            if (/\bExecutive Program\b/i.test(school) && !DEGREE_PAT.test(degree)) { degree = degree ? degree : school; school = ''; }
+            degree = cleanEntityField((degree || '').replace(SKILL_NOISE, '').trim());
+            // Require valid dates for Education entries
+            if (!dateRange || !/(\d{4}|present)/i.test(dateRange)) return;
+            if (GENERIC_SKILL_RE.test(school) || GENERIC_SKILL_RE.test(degree)) return;
+            if (!(EDU_HINT_RE.test(school) || EDU_HINT_RE.test(degree))) return;
+            school = collapseDupSegments(school);
+            degree = collapseDupSegments(degree);
+            dateRange = collapseDupSegments(dateRange);
+            if (school || degree || dateRange) items.push({ school, degree, dateRange });
+          });
+        }
+      } catch {}
+      return items;
+    } catch { return []; }
+  }
+
+  // Quick SPA fallback: temporarily navigate to details/education/ and harvest
+  async function scrapeEducationSPA(profileUrl) {
+    // SPA nav disabled for speed
+    if (!ALLOW_SPA_NAV) return [];
+    try {
+      const m = (profileUrl || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
+      const base = m ? m[0] : '';
+      const detailsUrl = base ? base + 'details/education/' : '';
+      if (!detailsUrl) return [];
+      const orig = location.href;
+      try {
+        history.pushState({}, '', detailsUrl);
+      } catch {}
+      await waitForSelector('main, .pvs-list__container', 6000);
+      await scrollUntilLoaded(document.scrollingElement || document.documentElement, 40, 220);
+      const items = [];
+      const cards = document.querySelectorAll('li, .pvs-list__paged-list-item, .artdeco-list__item');
+      cards.forEach((card) => {
+        let school = cleanEntityField(norm((card.querySelector('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], .mr1.t-bold, .entity-result__primary-subtitle') || {}).textContent || ''));
+        if (/\.(png|jpg|jpeg)$/i.test(school)) school = '';
+        let dateRange = norm((card.querySelector('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time') || {}).textContent || '');
+        const secTexts = Array.from(card.querySelectorAll('.t-14.t-normal, .t-14.t-normal.t-black, .t-black--light, .pvs-entity__subtitle, .pv-entity__degree-name, .pv-entity__fos, .inline-show-more-text, span[aria-hidden="true"]'))
+          .map(e => (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim())
+          .filter(Boolean);
+        const DEGREE_PAT = /(b\.?\s?tech|btech|b\.?e\.?|bachelor|m\.?\s?tech|mtech|m\.?e\.?|master|mba|pgdm|diploma|ph\.?d\.?|doctorate|executive\s+program)/i;
+        const SKILL_NOISE = /\b\+\d+\s*skills\b|\bRead more\b/i;
+        let degreeParts = [];
+        for (const t of secTexts) { if (!SKILL_NOISE.test(t) && DEGREE_PAT.test(t)) degreeParts.push(t); }
+        degreeParts = degreeParts.sort((a,b) => a.length - b.length);
+        let degree = degreeParts[0] || '';
+        let field = '';
+        if (!/computer|information|electrical|mechanical|civil|science|engineering|technology|management/i.test(degree)) {
+          const candidate = secTexts.find(t => /computer|information|electrical|mechanical|civil|science|engineering|technology|management/i.test(t));
+          if (candidate && candidate.length < 80) field = candidate;
+        }
+        if (field && degree && !new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(degree)) degree = `${degree}, ${field}`;
+        if (/\bExecutive Program\b/i.test(school) && !DEGREE_PAT.test(degree)) { degree = degree ? degree : school; school = ''; }
+        degree = cleanEntityField((degree || '').replace(SKILL_NOISE, '').trim());
+        if (!dateRange || !/(\d{4}|present)/i.test(dateRange)) return;
+        if (GENERIC_SKILL_RE.test(school) || GENERIC_SKILL_RE.test(degree)) return;
+        if (!(EDU_HINT_RE.test(school) || EDU_HINT_RE.test(degree))) return;
+        school = collapseDupSegments(school);
+        degree = collapseDupSegments(degree);
+        dateRange = collapseDupSegments(dateRange);
+        if (school || degree || dateRange) items.push({ school, degree, dateRange });
+      });
+      try { history.pushState({}, '', orig); } catch {}
+      return items;
+    } catch { return []; }
+  }
+
   function getCertifications() {
     progress('certifications', 'collect');
     const out = [];
@@ -393,22 +569,21 @@
       for (const sec of sections) {
         const h2 = q('h2, h3', sec);
         if (!h2 || !/(licenses?\s*&?\s*certifications?|certifications?)/i.test(h2.textContent || '')) continue;
-        const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item', sec);
+        const items = qa('li, .pvs-list__paged-list-item, .artdeco-list__item, .pvs-entity, .display-flex', sec);
         for (const li of items) {
-          let name = norm(text(q('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], span[aria-hidden="true"], .mr1.t-bold', li)));
-          let issuer = norm(text(q('.t-14.t-normal.t-black, .t-14.t-normal, .pvs-entity__subtitle', li)));
-          let date = norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li)));
+          let name = cleanEntityField(norm(text(q('.mr1.t-bold span[aria-hidden="true"], .t-bold span[aria-hidden="true"], span[aria-hidden="true"], .mr1.t-bold', li))));
+          let issuer = cleanEntityField(norm(text(q('.t-14.t-normal.t-black, .t-14.t-normal, .t-black--light, .entity-result__primary-subtitle, .pv-certifications-entity__issuer', li))));
+          let date = cleanEntityField(norm(text(q('.t-14.t-normal.t-black--light, .pvs-entity__caption-wrapper, time', li))));
 
-          // Clean noise and duplicates
-          if (/\bIssuer:\b/i.test(issuer)) issuer = issuer.replace(/.*?Issuer:\s*/i, '').trim();
-          if (/\bIssued\s+/i.test(date)) date = date.replace(/.*?(Issued\s+\w+\s+\d{4}).*/i, '$1').trim();
-          if (/\b\+\d+\s+skills\b/i.test(name)) name = '';
-          if (name || issuer || date) {
-            name = collapseDupSegments(name);
-            issuer = collapseDupSegments(issuer);
-            date = collapseDupSegments(date);
-            out.push({ name, issuer, date });
-          }
+          if (!name && !issuer && !date) continue;
+          // Strip "+N skills" and similar tails often appended in preview rows
+          issuer = issuer.replace(/\s*(?:and\s*)?\+\d+\s*skills?\b.*$/i, '').trim();
+          // Final clean
+          if (GENERIC_SKILL_RE.test(name) || GENERIC_SKILL_RE.test(issuer)) continue;
+          name = collapseDupSegments(name);
+          issuer = collapseDupSegments(issuer);
+          date = collapseDupSegments(date);
+          if (name || issuer || date) out.push({ name, issuer, date });
         }
         break;
       }
@@ -425,7 +600,7 @@
 
   async function scrapeBasics() {
     // Ensure top of page has rendered
-    await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]', 20000);
+    await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]', 8000);
     await autoScroll();
 
     // Name
@@ -433,10 +608,8 @@
     const nameNode = q('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir], div.ph5 h1');
     name = norm(text(nameNode));
 
-    // Headline
+    // Headline disabled for performance
     let headline = '';
-    const hlNode = q('.text-body-medium.break-words, .pv-text-details__left-panel div.text-body-medium, [data-test-id="hero-summary-card-subtitle"]');
-    headline = norm(text(hlNode));
 
     // About
     let about = norm(getAboutSection());
@@ -459,16 +632,15 @@
     } catch {}
 
     // Fallbacks via meta if missing
-    if (!name || !headline) {
+    if (!name) {
       const meta = metaFallbackNameHeadline();
       if (!name && meta.name) name = norm(meta.name);
-      if (!headline && meta.headline) headline = norm(meta.headline);
     }
 
     // Final fallback: derive name from URL slug if still missing
     if (!name) {
       try {
-        const slug = (location.pathname.match(/\/in\/([^\/]+)/) || [,''])[1];
+        const slug = (location.pathname.match(/\/in\/([^/]+)\/?/) || [,''])[1];
         if (slug) {
           name = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
         }
@@ -522,7 +694,7 @@
         const base = m ? m[0] : '';
         const url = base ? base + 'overlay/contact-info/' : '';
         if (url) {
-          const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 15000 });
+          const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 6000 });
           if (res.ok) {
             const html = await res.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -536,30 +708,21 @@
       if (!data.emails.length && !data.phones.length && !data.websites.length) {
         try {
           const btn = document.querySelector(
-            'a[href*="overlay/contact-info"], a[aria-label*="Contact info" i], button[aria-label*="Contact info" i], .pv-top-card a[data-control-name*="contact_see_more"]'
+            'a[href*="overlay/contact-info"], a[data-control-name*="contact_see_more" i], a[aria-label*="Contact" i], a[href*="contact-info" i]'
           );
           if (btn) {
-            (btn instanceof HTMLElement) && btn.click();
-            const modal = await waitForSelector('.pv-contact-info, .artdeco-modal, [role="dialog"] .pv-contact-info__container', 8000);
-            if (modal) {
-              harvestFromRoot(modal);
-              // Close modal if a dismiss button exists
-              const close = modal.querySelector('button[aria-label*="Dismiss" i], button.artdeco-modal__dismiss, button[aria-label*="Close" i]');
-              try { close && (close instanceof HTMLElement) && close.click(); } catch {}
-            }
+            await clickIfExists(btn);
+            await sleep(600);
+            const modal = document.querySelector('.pv-contact-info, .artdeco-modal, .pv-contact-info__container') || document;
+            harvestFromRoot(modal);
+            // Close
+            const close = modal.querySelector('button[aria-label*="Dismiss" i], button[aria-label*="Close" i], .artdeco-modal__dismiss');
+            try { close && (close instanceof HTMLElement) && close.click(); } catch {}
           }
         } catch {}
       }
 
-      // 3) As last resort, a gentle page-level scrape near top card
-      if (!data.emails.length && !data.phones.length && !data.websites.length) {
-        try {
-          const top = document.querySelector('.pv-top-card, [data-test-id="hero-summary-card"], main');
-          if (top) harvestFromRoot(top);
-        } catch {}
-      }
-
-      // Clean and normalize
+      // Post-process: de-dup and filter
       data.emails = uniq(data.emails).filter((e) => /@/.test(e));
       data.phones = uniq(data.phones).map((p) => p.replace(/[^+\d\-()\s]/g, '').replace(/\s+/g, ' ').trim());
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u));
@@ -567,7 +730,7 @@
       // sanitize websites: only http(s). For linkedin.com, only keep this profile's own /in/<slug> URL.
       let profileSlug = '';
       try {
-        const m2 = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/([^\/]+)\//);
+        const m2 = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/([^/]+)\//);
         if (m2 && m2[1]) profileSlug = m2[1].toLowerCase();
       } catch {}
       data.websites = uniq(data.websites).filter((u) => /^https?:\/\//i.test(u)).filter((u) => {
@@ -705,124 +868,19 @@
     } catch (e) {
       console.warn('Skills scrape failed:', e);
     }
-    return Array.from(skills);
+    // Cap to 5 skills max
+    return Array.from(skills).slice(0, 5);
   }
 
   async function scrapeTopSkills(includeSkills) {
-    if (!includeSkills) return [];
-    const top = new Set();
-
-    const harvestList = (root) => {
-      qa('li, .pvs-list__paged-list-item, .artdeco-list__item', root).forEach((li) => {
-        const raw = (q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)?.textContent || '').replace(/\s+/g, ' ').trim();
-        const name = (function cleanSkill(name){
-          let s = (name || '').replace(/\s+/g, ' ').trim();
-          if (!s || s.length < 2) return '';
-          if (/\b\d+\s+experiences?\b/i.test(s)) return '';
-          if ((/\b(at|across)\b/i.test(s) && s.length > 30)) return '';
-          const digits = (s.match(/\d/g) || []).length;
-          const letters = (s.match(/[A-Za-z]/g) || []).length;
-          if (!letters || digits > letters) return '';
-          return s;
-        })(raw);
-        if (name) top.add(name);
-      });
-      // Also parse inline bullet list preview near Top skills
-      qa('.t-14.t-normal .display-flex.align-items-center span[aria-hidden="true"], .display-flex.full-width .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]', root)
-        .forEach((el) => splitSkillsInline(el.textContent).forEach((s) => {
-          const cleaned = (function cleanSkill(name){
-            let v = (name || '').replace(/\s+/g, ' ').trim();
-            if (!v || v.length < 2) return '';
-            if (/\b\d+\s+experiences?\b/i.test(v)) return '';
-            if ((/\b(at|across)\b/i.test(v) && v.length > 30)) return '';
-            const digits = (v.match(/\d/g) || []).length;
-            const letters = (v.match(/[A-Za-z]/g) || []).length;
-            if (!letters || digits > letters) return '';
-            return v;
-          })(s);
-          if (cleaned && !top.has(cleaned)) { top.add(cleaned); }
-        }));
-    };
-
-    try {
-      // 1) Fetch details/skills first and take first 10 as Top Skills if no explicit group
-      try {
-        const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
-        const base = m ? m[0] : '';
-        const url = base ? base + 'details/skills/' : '';
-        if (url) {
-          const res = await fetchWithTimeout(url, { credentials: 'include', timeout: 15000 });
-          if (res.ok) {
-            const html = await res.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            const root = doc.querySelector('main') || doc;
-            harvestList(root);
-          }
-        }
-      } catch (e) { console.warn('Top skills fetch-first failed', e); }
-
-      // 2) In-page hints and explicit Top skills group
-      let skillsSection = null;
-      const sections = qa('section');
-      for (const sec of sections) {
-        const h2 = q('h2, h3', sec);
-        if (h2 && /skills/i.test(h2.textContent)) { skillsSection = sec; break; }
-      }
-      if (skillsSection) {
-        // Look for a Top skills group header
-        const topGroup = qa('div, section', skillsSection).find((el) => /top\s+skills/i.test((el.textContent || '')));
-        if (topGroup) harvestList(topGroup);
-        if (!top.size) harvestList(skillsSection);
-        // Try an explicit top-skills overlay button/link
-        let openBtn = qa('a, button, [role="button"]', skillsSection).find((b) => {
-          const t = (b.textContent || b.getAttribute('aria-label') || '').toLowerCase();
-          const href = b.getAttribute && (b.getAttribute('href') || '');
-          return /top\s+skills|show\s+top/i.test(t) || /overlay\/top-skills|details\/skills/i.test(href || '');
-        });
-        if (openBtn) {
-          await clickIfExists(openBtn);
-          const modal = await waitForSelector('.artdeco-modal[role="dialog"], .pvs-modal__container, .artdeco-modal', 10000);
-          if (modal) {
-            const scrollHost = q('.artdeco-modal__content, .pvs-modal__content, [role="dialog"]', modal) || modal;
-            await scrollUntilLoaded(scrollHost, 60, 300);
-            // If there is a top skills subheader inside modal, prefer it
-            const topHdr = qa('h2, h3, .t-bold', modal).find((h) => /top\s+skills/i.test((h.textContent || '')));
-            const root = topHdr ? topHdr.closest('section, div') || modal : modal;
-            harvestList(root);
-            const close = q('button[aria-label*="Dismiss" i], button.artdeco-modal__dismiss, button[aria-label*="Close" i]', modal);
-            try { close && (close instanceof HTMLElement) && close.click(); } catch {}
-          }
-        }
-      }
-
-      // 3) As last resort, a very quick SPA overlay attempt
-      if (ALLOW_SPA_NAV && !top.size) {
-        try {
-          const m = (location.href || '').match(/https:\/\/www\.linkedin\.com\/in\/[^/]+\//);
-          const base = m ? m[0] : '';
-          const detailsUrl = base ? base + 'details/skills/' : '';
-          if (detailsUrl) {
-            const orig = location.href;
-            history.pushState({}, '', detailsUrl);
-            await waitForSelector('main, .pvs-list__container', 8000);
-            const root = q('main') || document;
-            await scrollUntilLoaded(document.scrollingElement || document.documentElement, 40, 220);
-            harvestList(root);
-            try { history.pushState({}, '', orig); } catch {}
-          }
-        } catch (e) { console.warn('Top skills quick SPA failed', e); }
-      }
-    } catch (e) {
-      console.warn('Top skills scrape failed:', e);
-    }
-    // Only return up to 5 top skills to keep this focused
-    return Array.from(top).slice(0, 5);
+    // Top skills disabled for speed
+    return [];
   }
 
   async function scrapeAll(options) {
     progress('init');
-    await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]', 20000);
-    await autoScroll();
+    await waitForSelector('h1.text-heading-xlarge, .pv-text-details__left-panel h1, .artdeco-entity-lockup__title span[dir]', 5000);
+    await autoScroll(4);
 
     const profileUrl = getProfileUrl();
     let basics = { name: '', headline: '', about: '', profilePic: '', connectionDegree: '' };
@@ -831,74 +889,49 @@
     let licenses = [];
     let contactInfo = null;
     let skills = [];
-    let topSkills = [];
 
-    // Basics (name, headline, about, pic)
+    // Basics
     progress('basics');
-    try { basics = await scrapeBasics(); } catch (e) { console.warn('Basics failed', e); }
-    if (!basics.name) {
-      // Retry after small scroll; some heavy profiles render late
-      await sleep(900);
-      await autoScroll(8);
-      try { basics = await scrapeBasics(); } catch {}
+    basics = await runWithStepTimeout('basics', () => scrapeBasics(), 12000, { name: '', about: '', profilePic: '', connectionDegree: '' });
+
+    // Quick visibility pass to prompt lazy-load of sections (non-blocking)
+    try { ensureSectionVisible(/experience/i, 4); } catch {}
+    try { ensureSectionVisible(/education/i, 4); } catch {}
+    try { ensureSectionVisible(/certifications?|licenses?/i, 4); } catch {}
+    if (options && options.includeSkills) { try { ensureSectionVisible(/skills/i, 4); } catch {} }
+
+    // Harvest in parallel with tight per-step timeouts
+    const tasks = [];
+    tasks.push(runWithStepTimeout('experience', () => getExperience(), 5000, []));
+    tasks.push(runWithStepTimeout('education', () => getEducation(), 5000, []));
+    tasks.push(runWithStepTimeout('certifications', () => getCertifications(), 4000, []));
+    if (options && options.includeSkills) {
+      tasks.push(runWithStepTimeout('skills', () => scrapeSkillsFast(), 3000, []));
+    } else {
+      tasks.push(Promise.resolve([]));
     }
-    // Ensure About using deep fallback if still empty
-    if (!basics.about) {
+    tasks.push(runWithStepTimeout('contact', () => scrapeContactInfoFast(!!(options && options.includeContact)), 5000, null));
+
+    const [expRes, eduRes, licRes, skillsRes, contactRes] = await Promise.all(tasks);
+    experience = Array.isArray(expRes) ? expRes : [];
+    education = Array.isArray(eduRes) ? eduRes : [];
+    licenses = Array.isArray(licRes) ? licRes : [];
+    skills = Array.isArray(skillsRes) ? skillsRes.slice(0, 5) : [];
+    contactInfo = contactRes || null;
+
+    // Last-resort inline skills if empty
+    if ((options && options.includeSkills) && (!skills || !skills.length)) {
       try {
-        // Try dedicated details/about first, then main page
-        let ab = await runWithStepTimeout('about-deep-details', () => fetchAboutFromDetails(profileUrl), 14000, '');
-        if (!ab) ab = await runWithStepTimeout('about-deep', () => fetchAboutFromProfile(profileUrl), 12000, '');
-        if (ab) basics.about = ab;
+        const bullets = qa('.t-14.t-normal .display-flex.align-items-center span[aria-hidden="true"], .display-flex.full-width .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]');
+        const collected = new Set();
+        bullets.forEach(el => splitSkillsInline(el.textContent).forEach(s => collected.add(s)));
+        skills = Array.from(collected).slice(0, 5);
       } catch {}
     }
-    sendPartial('basics', basics);
 
-    // Lightweight sections (sync)
-    progress('sections');
-    try { experience = getExperience(); } catch (e) { console.warn('Exp failed', e); }
-    if (!experience || !experience.length) {
-      try { experience = await runWithStepTimeout('experience-deep', () => scrapeExperienceDeep(profileUrl), 15000, []); } catch {}
-    }
-    try { education = getEducation(); } catch (e) { console.warn('Edu failed', e); }
-    if (!education || !education.length) {
-      try { education = await runWithStepTimeout('education-deep', () => scrapeEducationDeep(profileUrl), 15000, []); } catch {}
-    }
-    try { licenses = getCertifications(); } catch (e) { console.warn('Licenses failed', e); }
-    if (!licenses || !licenses.length) {
-      try { licenses = await runWithStepTimeout('licenses-deep', () => scrapeLicensesDeep(profileUrl), 15000, []); } catch {}
-      if (!licenses || !licenses.length) {
-        try { licenses = await runWithStepTimeout('licenses-spa', () => scrapeLicensesSPA(profileUrl), 12000, []); } catch {}
-      }
-    }
-    sendPartial('sections', { experience, education, licenses });
-
-    // Heavy/async sections sequentially with per-step timeouts
-    progress('contact');
-    try {
-      contactInfo = await runWithStepTimeout('contact', () => scrapeContactInfo(!!options.includeContact), 45000, null);
-    } catch (e) { console.warn('Contact failed', e); }
-    sendPartial('contact', contactInfo);
-
-    progress('skills');
-    try {
-      skills = await runWithStepTimeout('skills', () => scrapeSkills(!!options.includeSkills), 60000, []);
-    } catch (e) { console.warn('Skills failed', e); skills = []; }
-    sendPartial('skills', skills);
-
-    progress('top-skills');
-    try {
-      topSkills = await runWithStepTimeout('top-skills', () => scrapeTopSkills(!!options.includeSkills), 45000, []);
-    } catch (e) { console.warn('Top skills failed', e); topSkills = []; }
-    sendPartial('topSkills', topSkills);
-
-    // Assemble result with deduped topSkills
-    progress('assemble');
-    const skillsSet = new Set(Array.isArray(skills) ? skills : []);
-    const topClean = Array.from(new Set(Array.isArray(topSkills) ? topSkills : [])).filter((s) => !skillsSet.has(s)).slice(0, 5);
     return {
       profileUrl,
       name: basics.name,
-      headline: basics.headline,
       about: basics.about,
       profilePic: basics.profilePic || '',
       connectionDegree: basics.connectionDegree || '',
@@ -907,7 +940,6 @@
       licenses,
       contactInfo,
       skills,
-      topSkills: topClean.length ? topClean : (Array.isArray(skills) ? skills.slice(0, 5) : []),
       scrapedAt: new Date().toISOString(),
       complete: true,
     };
@@ -924,6 +956,40 @@
         prevHeight = cur;
       }
     } catch {}
+  }
+
+  // Quickly bring a section into view so LinkedIn lazy-loads its items
+  async function ensureSectionVisible(headingRegex, maxHops = 10) {
+    try {
+      const findSec = () => {
+        const sections = qa('section');
+        for (const sec of sections) {
+          const h2 = q('h2, h3', sec);
+          if (h2 && headingRegex.test(h2.textContent || '')) return sec;
+        }
+        return null;
+      };
+      let sec = findSec();
+      if (sec) {
+        sec.scrollIntoView({ behavior: 'auto', block: 'center' });
+        await sleep(200);
+        try { await expandWithin(sec); } catch {}
+        return true;
+      }
+      // Hop-scroll until found or out of hops
+      for (let i = 0; i < maxHops; i++) {
+        window.scrollBy(0, Math.max(600, Math.floor(window.innerHeight * 0.8)));
+        await sleep(160);
+        sec = findSec();
+        if (sec) {
+          sec.scrollIntoView({ behavior: 'auto', block: 'center' });
+          await sleep(200);
+          try { await expandWithin(sec); } catch {}
+          return true;
+        }
+      }
+    } catch {}
+    return false;
   }
 
   async function scrapeLicensesDeep(profileUrl) {
@@ -960,7 +1026,9 @@
       const url = rootUrl ? rootUrl + 'details/certifications/' : '';
       if (!url) return [];
       const orig = location.href;
-      history.pushState({}, '', url);
+      try {
+        history.pushState({}, '', url);
+      } catch {}
       await waitForSelector('main, .pvs-list__container', 6000);
       await scrollUntilLoaded(document.scrollingElement || document.documentElement, 40, 220);
       const res = getCertifications();
@@ -1144,12 +1212,34 @@
     return Array.from(set);
   }
 
+  // --- Noise filtering helpers for list sections ---
+  const GARBAGE_RE = /(endorsement|endorsed by|second\s+degree\s+connection|third\s+degree\s+connection|send\s+profile\s+in\s+a\s+message|save\s+to\s+pdf|request\s+a\s+recommendation|recommend\b|unfollow\b|remove\s+connection|report\s*\/\s*block|about\s+this\s+profile|privacy\s*&?\s*terms|ad\s+choices|careers|marketing\s+solutions|sales\s+solutions|mobile|small\s+business|safety\s+center|questions\?|manage\s+your\s+account|professional\s+community\s+policies|talent\s+solutions)/i;
+  const DEGREE_BADGE_RE = /^\s*(?:·\s*)?\d+(?:st|nd|rd|th)\b/i;
+  const GENERIC_SKILL_RE = /^(management|telecommunications|market\s+research|competitive\s+analysis|team\s+management|software\s+development|e-?commerce|start-?ups?|leadership|business\s+intelligence|product\s+marketing|analytics|html(?:\s*\+\s*css)?|software\s+project\s+management|online\s+marketing|marketing\s+strategy|operations\s+management|analysis|marketing\s+research|customer\s+relations|competitive\s+intelligence|consulting|strategic\s+planning|team\s+leadership|strategy|seo|customer\s+acquisition|integration|software\s+engineering|business\s+relations|business\s+information|product\s+development|networking|crm|management\s+consulting|vendor\s+management|testing|online\s+business\s+optimization|telecommunication\s+industry|software\s+design|web\s+project\s+management|search\s+engine\s+positioning|direct\s+marketing|business\s+research|customer\s+service|training)$/i;
+  const ORG_HINT_RE = /(\b(ltd|llc|gmbh|inc|corp|co\.?|pvt|plc|technologies|solutions|systems|labs|software|consulting|university|college|institute|school|academy|group|holding|enterprises?)\b|\bat\b)/i;
+  const EDU_HINT_RE = /(university|college|institute|school|academy|iit|nit|iiit|mit|oxford|cambridge|bachelor|master|mba|b\.?e\.?|b\.?tech|m\.?e\.?|m\.?tech|pgdm|ph\.?d\.?|diploma)/i;
+  function hasEnoughLetters(s) {
+    const v = (s || '').replace(/\s+/g, ' ').trim();
+    const letters = (v.match(/[a-z]/gi) || []).length;
+    const digits = (v.match(/\d/g) || []).length;
+    return letters >= 2 && (letters >= digits || letters >= 4);
+  }
+  function cleanEntityField(s) {
+    let v = (s || '').replace(/\s+/g, ' ').trim();
+    if (!v) return '';
+    if (GARBAGE_RE.test(v)) return '';
+    if (DEGREE_BADGE_RE.test(v)) return '';
+    if (/^(home|messaging|notifications)$/i.test(v)) return '';
+    if (!hasEnoughLetters(v)) return '';
+    return v;
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'PING') { sendResponse({ type: 'PONG' }); return; }
     if (msg && msg.type === 'DO_SCRAPE') {
       (async () => {
         try {
-          const data = await withOverallTimeout(scrapeAll(msg.options || {}), 170000);
+          const data = await withOverallTimeout(scrapeAll(msg.options || {}), 20000);
           progress('done');
           // Return partial data even if name not found; popup can show warning
           sendResponse({ ok: true, data });
@@ -1167,7 +1257,14 @@
         sendResponse({
           ok: true,
           data: {
-            skills: getTopSkills(),
+            skills: (function(){
+              try {
+                const bullets = qa('.t-14.t-normal .display-flex.align-items-center span[aria-hidden="true"], .display-flex.full-width .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"]');
+                const s = new Set();
+                bullets.forEach(el => splitSkillsInline(el.textContent).forEach(x => s.add(x)));
+                return Array.from(s).slice(0, 5);
+              } catch { return []; }
+            })(),
             about: getAboutSection(),
           },
         });
@@ -1178,7 +1275,7 @@
     }
   });
 
-  const ALLOW_SPA_NAV = true;
+  const ALLOW_SPA_NAV = false;
 
   // Port-based long-lived messaging for robust large-profile scraping (inside IIFE so it can use helpers)
   try {
@@ -1210,7 +1307,7 @@
               });
             });
           };
-          const data = await wot(scrapeAll(options), 170000);
+          const data = await wot(scrapeAll(options), 20000);
           if (aborted) return;
           try {
             chrome.storage.session.set({ lastScrape: data }, () => {
@@ -1229,4 +1326,71 @@
       });
     });
   } catch {}
+
+  // Fast skills: in-page only, no clicks, no waits; cap to 5
+  async function scrapeSkillsFast() {
+    const set = new Set();
+    try {
+      // Visible skill rows (Skills section only)
+      const skillsSection = (function(){
+        const sections = qa('section');
+        for (const sec of sections) {
+          const h2 = q('h2, h3', sec);
+          if (h2 && /\bskills\b/i.test(h2.textContent || '')) return sec;
+        }
+        return null;
+      })();
+
+      const CERT_WORD_RE = /(certified|certification|certificate|rhcsa|aws\s+certified|oracle\s+certified|microsoft\s+certified|foundation\s+certificate)/i;
+      const META_WORD_RE = /(issuer|issued|university|college|institute|academy|location|based\s+in|currently)/i;
+      const GEO_RE = /(jaipur|kota|india|delhi|mumbai|bangalore|bengaluru|pune|gurgaon|noida|hyderabad)/i;
+      const SENTENCE_TOKEN_RE = /(\.|,|;|:\s|\bi\b|\bmy\b|\bi'm\b|\bi am\b|\bwith\b|\band\b|\bthat\b|\bwhich\b)/i;
+
+      const plausibleSkill = (v) => {
+        let s = (v || '').replace(/\s+/g, ' ').trim();
+        if (!s || s.length < 2) return '';
+        // Obvious noise
+        if (/\b\+\d+\s*skills\b/i.test(s)) return '';
+        if (/\b\d+\s+experiences?\b/i.test(s)) return '';
+        // Drop cert/meta/geo/sentence-like
+        if (CERT_WORD_RE.test(s)) return '';
+        if (META_WORD_RE.test(s)) return '';
+        if (GEO_RE.test(s)) return '';
+        if (SENTENCE_TOKEN_RE.test(s) && s.length > 20) return '';
+        // Word-count and length bounds
+        const words = s.split(/\s+/).filter(Boolean);
+        if (words.length > 3) return '';
+        if (s.length > 35) return '';
+        // Character balance
+        const digits = (s.match(/\d/g) || []).length;
+        const letters = (s.match(/[A-Za-z]/g) || []).length;
+        if (!letters || digits > letters) return '';
+        // Avoid generic labels only
+        if (/^(skills?|top|other|more)$/i.test(s)) return '';
+        return s;
+      };
+
+      if (skillsSection) {
+        qa('li, .pvs-list__paged-list-item, .artdeco-list__item', skillsSection).forEach((li) => {
+          const raw = (q('span[aria-hidden="true"], .mr1.t-bold span, .t-bold', li)?.textContent || '').replace(/\s+/g, ' ').trim();
+          const skill = plausibleSkill(raw);
+          if (skill) set.add(skill);
+        });
+      }
+
+      // Strict inline-bullets fallback if section yields <5
+      if (set.size < 5) {
+        try {
+          const bullets = qa('.t-14.t-normal .display-flex.align-items-center span[aria-hidden="true"], .display-flex.full-width .t-14.t-normal.t-black.display-flex.align-items-center span[aria-hidden="true"], .pv-top-card .inline-show-more-text span[aria-hidden="true"]');
+          bullets.forEach((el) => {
+            splitSkillsInline(el.textContent).forEach((s) => {
+              const cleaned = plausibleSkill(s);
+              if (cleaned) set.add(cleaned);
+            });
+          });
+        } catch {}
+      }
+    } catch {}
+    return Array.from(set).slice(0, 5);
+  }
 })();
