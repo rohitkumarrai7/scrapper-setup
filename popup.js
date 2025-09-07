@@ -49,20 +49,22 @@ function renderProfile(data) {
 
   const pic = $('profilePic');
   const nm = $('candidateName');
-  const hl = $('candidateHeadline');
+  // Headline removed per client request
+  const hl = null;
   const url = $('candidateUrl');
   const ci = $('contactInfo');
   const sm = $('summary');
   const sk = $('skills');
-  const tsk = $('topSkills');
+  // Top Skills removed per client request
+  const tsk = null;
   const ex = $('experience');
   const ed = $('education');
   const lc = $('certifications');
 
   if (pic) pic.src = data.profilePic || '';
   if (nm) nm.textContent = data.name || '—';
-  if (hl) hl.textContent = data.headline || '—';
-  // Hide standalone URL; we'll show it inside Contact Info instead
+  // headline suppressed
+  // if (hl) hl.textContent = data.headline || '—';
   if (url) {
     url.textContent = '';
     url.onclick = null;
@@ -113,20 +115,12 @@ function renderProfile(data) {
     return x;
   };
 
-  // Top Skills (limit 5)
-  const topArr = Array.isArray(data.topSkills)
-    ? Array.from(new Set(data.topSkills.map(cleanSkillLabel).filter(Boolean))).slice(0, 5)
-    : [];
-  if (tsk) {
-    tsk.innerHTML = topArr.map(s => `<span class="chip">${s}</span>`).join(' ');
-    if (!topArr.length) tsk.textContent = '—';
-  }
-
+  // Top Skills removed
   // All Skills (excluding Top Skills to avoid duplication)
   if (sk) {
     const allSkills = Array.isArray(data.skills) ? data.skills.map(cleanSkillLabel).filter(Boolean) : [];
-    const filtered = allSkills.filter(s => !topArr.includes(s));
-    const shown = filtered.length ? filtered : allSkills; // if everything got filtered, show original
+    // Cap to 5 skills max per client
+    const shown = allSkills.slice(0, 5);
     sk.innerHTML = shown.map(s => `<span class="chip">${s}</span>`).join(' ');
     if (!shown.length) sk.textContent = '—';
   }
@@ -456,5 +450,5 @@ window.getLastScrape = async function () {
   });
 };
 
-// Initialize uploader after DOM is ready
-try { setupUploader(); } catch {}
+// Resume uploader disabled per client request
+// try { setupUploader(); } catch {}
